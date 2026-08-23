@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --color-background: #ede9dd;
+  --color-surface: #f3efe6;
+  --color-surface-strong: #fbf9f3;
+  --color-foreground: #1e2222;
+  --color-muted: #6b7280;
+  --color-muted-subtle: #9aa0a6;
+  --color-border: #e6e1d3;
+
+  --color-accent: #c8862e;
+  --color-accent-hover: #b3741f;
+  --color-accent-disabled: #d9b879;
+  --color-accent-foreground: #ffffff;
+  --color-accent-tint: #f5e6cc;
+
+  --color-danger-bg: #fbe9e7;
+  --color-danger-fg: #9a3b1f;
+  --color-success-bg: #e9f2e8;
+  --color-success-fg: #2e6a3d;
+
+  --color-brand-bg: #14171a;
+  --color-brand-fg: #f1efea;
+  --color-brand-muted: #9aa3ac;
+  --color-brand-border: #2a2f35;
+  --color-brand-accent: #e3a83f;
+}
+
+.dark {
+  --color-background: #14171a;
+  --color-surface: #1a1e22;
+  --color-surface-strong: #20252b;
+  --color-foreground: #f1efea;
+  --color-muted: #9aa3ac;
+  --color-muted-subtle: #767e87;
+  --color-border: #2a2f35;
+
+  --color-accent: #e3a83f;
+  --color-accent-hover: #edb85a;
+  --color-accent-disabled: #6b5b38;
+  --color-accent-foreground: #14171a;
+  --color-accent-tint: #2c2415;
+
+  --color-danger-bg: #2c1a17;
+  --color-danger-fg: #f2a894;
+  --color-success-bg: #16261b;
+  --color-success-fg: #8fd6a2;
+
+  --color-brand-bg: #0e1012;
+  --color-brand-fg: #f1efea;
+  --color-brand-muted: #9aa3ac;
+  --color-brand-border: #2a2f35;
+  --color-brand-accent: #e3a83f;
+}
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-strong: var(--color-surface-strong);
+  --color-foreground: var(--color-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-subtle: var(--color-muted-subtle);
+  --color-border: var(--color-border);
+
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-disabled: var(--color-accent-disabled);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-accent-tint: var(--color-accent-tint);
+
+  --color-danger-bg: var(--color-danger-bg);
+  --color-danger-fg: var(--color-danger-fg);
+  --color-success-bg: var(--color-success-bg);
+  --color-success-fg: var(--color-success-fg);
+
+  --color-brand-bg: var(--color-brand-bg);
+  --color-brand-fg: var(--color-brand-fg);
+  --color-brand-muted: var(--color-brand-muted);
+  --color-brand-border: var(--color-brand-border);
+  --color-brand-accent: var(--color-brand-accent);
+
+  --font-sans: var(--font-plex-sans);
+  --font-serif: var(--font-lora);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+::selection {
+  background: var(--color-accent-tint);
+  color: var(--color-foreground);
+}
