@@ -3,9 +3,10 @@
 The candidate/admin-facing CMS for Chatfolio — Next.js 16 (App Router), React 19,
 TypeScript, and Tailwind CSS v4.
 
-Only the **auth journey** (login, registration, forgot/reset password) is built so far;
-the rest of the CMS (profile, CV, portfolio, dashboard, admin views) is still being
-designed against [`Docs/ADMIN_PANEL_UI_REFERENCE.md`](./Docs/ADMIN_PANEL_UI_REFERENCE.md).
+Only the **auth journey** (login, registration, forgot/reset password, 2FA login
+verification) is built so far; the rest of the CMS (profile, CV, portfolio, dashboard,
+admin views) is still being designed against
+[`Docs/ADMIN_PANEL_UI_REFERENCE.md`](./Docs/ADMIN_PANEL_UI_REFERENCE.md).
 
 ## Getting started
 
@@ -23,7 +24,8 @@ Open [http://localhost:3000](http://localhost:3000) — it redirects to `/login`
 src/
   app/
     (auth)/login, (auth)/register,                          route pages
-    (auth)/forgot-password, (auth)/reset-password
+    (auth)/forgot-password, (auth)/reset-password,
+    (auth)/verify-2fa
     dashboard                                                post-login landing (stub)
   components/
     ui/          generic, reusable primitives (Button, TextField, Alert, ThemeToggle, …)
@@ -46,6 +48,10 @@ Follows `Docs/ADMIN_PANEL_UI_REFERENCE.md` §2.2 exactly:
   invalidate each other's single-use refresh token (§2.3).
 - `/dashboard` is gated client-side by `RequireAuth`; the backend remains the real
   authorization boundary for any API call.
+- If `/auth/login` returns `requires_two_factor: true` (§2.6), the `challenge_token` is
+  held in the same in-memory store (`pendingChallenge`) and never persisted either —
+  landing on `/verify-2fa` with no pending challenge (e.g. a reload) sends the user back
+  to `/login` to start over, per the doc's guidance for a stalled/expired challenge.
 
 ## Talking to the backend (and why there's no CORS setup)
 

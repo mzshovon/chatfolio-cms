@@ -15,6 +15,17 @@ export type TokenPair = {
   token_type: "bearer";
 };
 
+export type TwoFactorMethod = "email" | "phone" | "both";
+
+export type TwoFactorChallenge = {
+  requires_two_factor: true;
+  challenge_token: string;
+  method: TwoFactorMethod;
+  masked_destinations: string[];
+};
+
+export type LoginResponse = (TokenPair & { requires_two_factor: false }) | TwoFactorChallenge;
+
 export function register(email: string, password: string) {
   return apiRequest<AuthUser>("/auth/register", {
     method: "POST",
@@ -23,9 +34,23 @@ export function register(email: string, password: string) {
 }
 
 export function login(email: string, password: string) {
-  return apiRequest<TokenPair>("/auth/login", {
+  return apiRequest<LoginResponse>("/auth/login", {
     method: "POST",
     body: { email, password },
+  });
+}
+
+export function verifyTwoFactorLogin(challengeToken: string, code: string) {
+  return apiRequest<TokenPair & { requires_two_factor: false }>("/auth/2fa/login/verify", {
+    method: "POST",
+    body: { challenge_token: challengeToken, code },
+  });
+}
+
+export function resendTwoFactorLogin(challengeToken: string) {
+  return apiRequest<void>("/auth/2fa/login/resend", {
+    method: "POST",
+    body: { challenge_token: challengeToken },
   });
 }
 

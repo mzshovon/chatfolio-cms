@@ -6,8 +6,12 @@ type AuthState = {
   user: authApi.AuthUser | null;
   accessToken: string | null;
   refreshToken: string | null;
+  pendingChallenge: authApi.TwoFactorChallenge | null;
   status: "idle" | "loading";
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ requiresTwoFactor: boolean }>;
+  verifyTwoFactor: (code: string) => Promise<void>;
+  resendTwoFactor: () => Promise<void>;
+  cancelTwoFactor: () => void;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   getValidAccessToken: () => Promise<string | null>;
@@ -19,28 +23,64 @@ type AuthState = {
 // an httpOnly-cookie refresh flow.
 let inFlightRefresh: Promise<authApi.TokenPair> | null = null;
 
+async function settleSession(
+  set: (partial: Partial<AuthState>) => void,
+  tokens: authApi.TokenPair
+) {
+  const user = await authApi.me(tokens.access_token);
+  set({
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token,
+    user,
+    pendingChallenge: null,
+  });
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
   refreshToken: null,
+  pendingChallenge: null,
   status: "idle",
 
   login: async (email, password) => {
     set({ status: "loading" });
     try {
-      const tokens = await authApi.login(email, password);
-      const user = await authApi.me(tokens.access_token);
-      set({
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        user,
-        status: "idle",
-      });
+      const response = await authApi.login(email, password);
+      if (response.requires_two_factor) {
+        set({ pendingChallenge: response, status: "idle" });
+        return { requiresTwoFactor: true };
+      }
+      await settleSession(set, response);
+      set({ status: "idle" });
+      return { requiresTwoFactor: false };
     } catch (error) {
       set({ status: "idle" });
       throw error;
     }
   },
+
+  verifyTwoFactor: async (code) => {
+    const { pendingChallenge } = get();
+    if (!pendingChallenge) throw new Error("No pending two-factor challenge.");
+    set({ status: "loading" });
+    try {
+      const tokens = await authApi.verifyTwoFactorLogin(pendingChallenge.challenge_token, code);
+      await settleSession(set, tokens);
+      set({ status: "idle" });
+    } catch (error) {
+      set({ status: "idle" });
+      throw error;
+    }
+  },
+
+  resendTwoFactor: async () => {
+    const { pendingChallenge } = get();
+    if (!pendingChallenge) throw new Error("No pending two-factor challenge.");
+    await authApi.resendTwoFactorLogin(pendingChallenge.challenge_token);
+  },
+
+  cancelTwoFactor: () => set({ pendingChallenge: null }),
 
   register: async (email, password) => {
     set({ status: "loading" });
@@ -53,7 +93,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     const { refreshToken } = get();
-    set({ user: null, accessToken: null, refreshToken: null });
+    set({ user: null, accessToken: null, refreshToken: null, pendingChallenge: null });
     if (refreshToken) {
       await authApi.logout(refreshToken).catch(() => {});
     }

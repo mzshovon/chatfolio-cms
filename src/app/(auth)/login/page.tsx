@@ -34,8 +34,8 @@ export default function LoginPage() {
   const onSubmit = async (values: LoginValues) => {
     setFormError(null);
     try {
-      await login(values.email, values.password);
-      router.push("/dashboard");
+      const { requiresTwoFactor } = await login(values.email, values.password);
+      router.push(requiresTwoFactor ? "/verify-2fa" : "/dashboard");
     } catch (error) {
       setFormError(
         error instanceof ApiError ? error.message : "Something went wrong. Please try again."
