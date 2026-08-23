@@ -1,5 +1,3 @@
-import { env } from "@/lib/env";
-
 export class ApiError extends Error {
   status: number;
 
@@ -29,7 +27,10 @@ export async function apiRequest<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${env.apiUrl}/v1${path}`, {
+    // Same-origin path — Next.js rewrites this to the real backend
+    // server-side (see next.config.ts), so the browser never makes a
+    // cross-origin request and CORS never comes into play.
+    response = await fetch(`/api/v1${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,

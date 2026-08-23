@@ -11,7 +11,7 @@ Only the **auth journey** (login, registration) is built so far; the rest of the
 
 ```bash
 npm install
-cp .env.example .env.local   # set NEXT_PUBLIC_API_URL to your backend
+cp .env.example .env.local   # set BACKEND_API_URL to your backend
 npm run dev
 ```
 
@@ -45,6 +45,25 @@ Follows `Docs/ADMIN_PANEL_UI_REFERENCE.md` §2.2 exactly:
   invalidate each other's single-use refresh token (§2.3).
 - `/dashboard` is gated client-side by `RequireAuth`; the backend remains the real
   authorization boundary for any API call.
+
+## Talking to the backend (and why there's no CORS setup)
+
+The app never calls the backend directly from the browser. `src/lib/api/http.ts`
+requests same-origin `/api/v1/...`, and `next.config.ts` rewrites that to
+`${BACKEND_API_URL}/v1/...` on the Next.js server. Since the browser only ever
+talks to its own origin, CORS never applies — no `Access-Control-*` headers
+needed on the backend for this app to work.
+
+The one thing this **does** require of the backend: it must be reachable from
+wherever the Next.js server runs (same network/host in dev, same
+VPC/deployment in production) — not from the visitor's browser.
+
+If the backend is ever called directly from a browser (a different frontend,
+a mobile web view, local testing with `curl`/Postman from a browser-based
+tool, etc.), it will still need real CORS headers for that path
+(`Access-Control-Allow-Origin` for the calling origin, `Allow-Methods`,
+`Allow-Headers: Authorization, Content-Type`) — the proxy here only removes
+the requirement for *this* app.
 
 ## Theming
 
