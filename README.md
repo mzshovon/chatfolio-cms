@@ -3,9 +3,9 @@
 The candidate/admin-facing CMS for Chatfolio — Next.js 16 (App Router), React 19,
 TypeScript, and Tailwind CSS v4.
 
-Only the **auth journey** (login, registration) is built so far; the rest of the CMS
-(profile, CV, portfolio, dashboard, admin views) is still being designed against
-[`Docs/ADMIN_PANEL_UI_REFERENCE.md`](./Docs/ADMIN_PANEL_UI_REFERENCE.md).
+Only the **auth journey** (login, registration, forgot/reset password) is built so far;
+the rest of the CMS (profile, CV, portfolio, dashboard, admin views) is still being
+designed against [`Docs/ADMIN_PANEL_UI_REFERENCE.md`](./Docs/ADMIN_PANEL_UI_REFERENCE.md).
 
 ## Getting started
 
@@ -22,7 +22,8 @@ Open [http://localhost:3000](http://localhost:3000) — it redirects to `/login`
 ```text
 src/
   app/
-    (auth)/login, (auth)/register, (auth)/forgot-password   route pages
+    (auth)/login, (auth)/register,                          route pages
+    (auth)/forgot-password, (auth)/reset-password
     dashboard                                                post-login landing (stub)
   components/
     ui/          generic, reusable primitives (Button, TextField, Alert, ThemeToggle, …)

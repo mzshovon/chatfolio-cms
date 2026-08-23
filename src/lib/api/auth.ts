@@ -46,3 +46,17 @@ export function logout(refreshToken: string) {
 export function me(accessToken: string) {
   return apiRequest<AuthUser>("/auth/me", { accessToken });
 }
+
+export function forgotPassword(email: string) {
+  return apiRequest<void>("/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+export function resetPassword(token: string, newPassword: string) {
+  return apiRequest<void>("/auth/reset-password", {
+    method: "POST",
+    body: { token, new_password: newPassword },
+  });
+}
