@@ -3,10 +3,12 @@
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { SavedFlash } from "@/components/ui/saved-flash";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/http";
 import * as profileApi from "@/lib/api/profile";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
+import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { cn } from "@/lib/cn";
 import { useEffect, useState } from "react";
 
@@ -54,7 +56,7 @@ export default function ProfileBuilderPage() {
 
   const [profile, setProfile] = useState<profileApi.Profile | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
-  const [profileSaved, setProfileSaved] = useState(true);
+  const savedFlash = useSaveFlash();
 
   const [experience, setExperience] = useState<DraftExperience[]>([]);
   const [projects, setProjects] = useState<DraftProject[]>([]);
@@ -105,7 +107,6 @@ export default function ProfileBuilderPage() {
   // --- profile fields ---
   const setProfileField = (patch: Partial<profileApi.Profile>) => {
     setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
-    setProfileSaved(false);
   };
   const onSaveProfile = async () => {
     if (!profile) return;
@@ -124,7 +125,7 @@ export default function ProfileBuilderPage() {
         })
       );
       setProfile(updated);
-      setProfileSaved(true);
+      savedFlash.flash("profile");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save your profile.");
     } finally {
@@ -169,11 +170,13 @@ export default function ProfileBuilderPage() {
         setExperience((prev) =>
           prev.map((e) => (e.id === id ? { ...created, isNew: false, saving: false } : e))
         );
+        savedFlash.flash(created.id);
       } else {
         const updated = await authed((token) => profileApi.updateExperience(token, id, input));
         setExperience((prev) =>
           prev.map((e) => (e.id === id ? { ...updated, isNew: false, saving: false } : e))
         );
+        savedFlash.flash(id);
       }
     } catch (err) {
       patchExperience(id, { saving: false });
@@ -223,6 +226,7 @@ export default function ProfileBuilderPage() {
               : p
           )
         );
+        savedFlash.flash(created.id);
       } else {
         const updated = await authed((token) => profileApi.updateProject(token, id, input));
         setProjects((prev) =>
@@ -232,6 +236,7 @@ export default function ProfileBuilderPage() {
               : p
           )
         );
+        savedFlash.flash(id);
       }
     } catch (err) {
       patchProject(id, { saving: false });
@@ -274,11 +279,13 @@ export default function ProfileBuilderPage() {
         setEducation((prev) =>
           prev.map((e) => (e.id === id ? { ...created, isNew: false, saving: false } : e))
         );
+        savedFlash.flash(created.id);
       } else {
         const updated = await authed((token) => profileApi.updateEducation(token, id, input));
         setEducation((prev) =>
           prev.map((e) => (e.id === id ? { ...updated, isNew: false, saving: false } : e))
         );
+        savedFlash.flash(id);
       }
     } catch (err) {
       patchEducation(id, { saving: false });
@@ -444,7 +451,7 @@ export default function ProfileBuilderPage() {
             </div>
 
             <div className="mt-4 flex items-center justify-end gap-2.5">
-              {profileSaved && <span className="text-[11.5px] text-success-fg">Saved</span>}
+              <SavedFlash state={savedFlash.get("profile")} />
               <button
                 type="button"
                 onClick={onSaveProfile}
@@ -524,7 +531,8 @@ export default function ProfileBuilderPage() {
                     onChange={(e) => patchExperience(row.id, { description: e.target.value })}
                     className={cn(fieldClass, "mt-2.5 resize-y")}
                   />
-                  <div className="mt-2.5 flex justify-end">
+                  <div className="mt-2.5 flex items-center justify-end gap-2.5">
+                    <SavedFlash state={savedFlash.get(row.id)} />
                     <button
                       type="button"
                       onClick={() => saveExperience(row.id)}
@@ -594,7 +602,8 @@ export default function ProfileBuilderPage() {
                       className={fieldClass}
                     />
                   </div>
-                  <div className="mt-2.5 flex justify-end">
+                  <div className="mt-2.5 flex items-center justify-end gap-2.5">
+                    <SavedFlash state={savedFlash.get(row.id)} />
                     <button
                       type="button"
                       onClick={() => saveProject(row.id)}
@@ -712,7 +721,8 @@ export default function ProfileBuilderPage() {
                       className={fieldClass}
                     />
                   </div>
-                  <div className="mt-2.5 flex justify-end">
+                  <div className="mt-2.5 flex items-center justify-end gap-2.5">
+                    <SavedFlash state={savedFlash.get(row.id)} />
                     <button
                       type="button"
                       onClick={() => saveEducation(row.id)}

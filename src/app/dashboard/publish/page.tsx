@@ -2,6 +2,7 @@
 
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { SavedFlash } from "@/components/ui/saved-flash";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusPill } from "@/components/ui/status-pill";
 import { ApiError } from "@/lib/api/http";
@@ -9,6 +10,7 @@ import * as portfolioApi from "@/lib/api/portfolio-settings";
 import * as profileApi from "@/lib/api/profile";
 import * as sectionsApi from "@/lib/api/sections";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
+import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { useEffect, useState } from "react";
 
 export default function PublishSettingsPage() {
@@ -29,6 +31,7 @@ export default function PublishSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const savedFlash = useSaveFlash();
   const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export default function PublishSettingsPage() {
       );
       setSettings(updated);
       setSlugDraft(updated.slug);
+      savedFlash.flash("settings");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save your changes.");
     } finally {
@@ -206,14 +210,17 @@ export default function PublishSettingsPage() {
           Allow recruiters to download your CV
         </label>
 
-        <button
-          type="button"
-          onClick={onSaveSettings}
-          disabled={saving}
-          className="self-start rounded-[9px] bg-accent px-4 py-2 text-[13px] font-semibold text-accent-foreground disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Save settings"}
-        </button>
+        <div className="flex items-center gap-2.5">
+          <SavedFlash state={savedFlash.get("settings")} />
+          <button
+            type="button"
+            onClick={onSaveSettings}
+            disabled={saving}
+            className="rounded-[9px] bg-accent px-4 py-2 text-[13px] font-semibold text-accent-foreground disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save settings"}
+          </button>
+        </div>
       </Card>
 
       <Card className="mt-4">
