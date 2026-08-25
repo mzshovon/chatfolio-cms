@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import * as authApi from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/http";
+import { getStoredRefreshToken, setStoredRefreshToken } from "@/lib/storage/refresh-token";
 
 type AuthState = {
   user: authApi.AuthUser | null;
@@ -8,6 +9,12 @@ type AuthState = {
   refreshToken: string | null;
   pendingChallenge: authApi.TwoFactorChallenge | null;
   status: "idle" | "loading";
+  // True until the initial silent-restore attempt (from a stored refresh
+  // token) has resolved one way or the other — guards (RequireAuth /
+  // GuestOnly) wait on this instead of redirecting on the very first
+  // render, so a reload doesn't bounce an otherwise-valid session to /login.
+  restoring: boolean;
+  restoreSession: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ requiresTwoFactor: boolean }>;
   verifyTwoFactor: (code: string) => Promise<void>;
   resendTwoFactor: () => Promise<void>;
@@ -17,16 +24,17 @@ type AuthState = {
   getValidAccessToken: () => Promise<string | null>;
 };
 
-// Both tokens live in memory only (Zustand state, never persisted) — see
-// Docs/ADMIN_PANEL_UI_REFERENCE.md §2.2. A hard reload always requires signing
-// in again; that's the intentional, safest tradeoff until the backend offers
-// an httpOnly-cookie refresh flow.
+// The access token stays memory-only (short-lived, cheap to re-derive). The
+// refresh token is persisted to localStorage — see
+// src/lib/storage/refresh-token.ts for why that's a deliberate, explicitly
+// chosen tradeoff rather than the doc's default recommendation.
 let inFlightRefresh: Promise<authApi.TokenPair> | null = null;
 
 async function settleSession(
   set: (partial: Partial<AuthState>) => void,
   tokens: authApi.TokenPair
 ) {
+  setStoredRefreshToken(tokens.refresh_token);
   const user = await authApi.me(tokens.access_token);
   set({
     accessToken: tokens.access_token,
@@ -42,6 +50,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   refreshToken: null,
   pendingChallenge: null,
   status: "idle",
+  restoring: true,
+
+  restoreSession: async () => {
+    const stored = getStoredRefreshToken();
+    if (!stored) {
+      set({ restoring: false });
+      return;
+    }
+    try {
+      const tokens = await authApi.refresh(stored);
+      await settleSession(set, tokens);
+    } catch {
+      setStoredRefreshToken(null);
+    } finally {
+      set({ restoring: false });
+    }
+  },
 
   login: async (email, password) => {
     set({ status: "loading" });
@@ -93,6 +118,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     const { refreshToken } = get();
+    setStoredRefreshToken(null);
     set({ user: null, accessToken: null, refreshToken: null, pendingChallenge: null });
     if (refreshToken) {
       await authApi.logout(refreshToken).catch(() => {});
@@ -112,9 +138,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         inFlightRefresh = authApi.refresh(refreshToken);
       }
       const tokens = await inFlightRefresh;
+      setStoredRefreshToken(tokens.refresh_token);
       set({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
       return tokens.access_token;
     } catch (error) {
+      setStoredRefreshToken(null);
       set({ user: null, accessToken: null, refreshToken: null });
       if (error instanceof ApiError && error.status === 401) return null;
       throw error;

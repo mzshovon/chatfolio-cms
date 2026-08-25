@@ -1,52 +1,190 @@
 "use client";
 
-import { Logo } from "@/components/auth/logo";
-import { RequireAuth } from "@/components/auth/require-auth";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Alert } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { StatusPill } from "@/components/ui/status-pill";
+import * as dashboardApi from "@/lib/api/dashboard";
+import { ApiError } from "@/lib/api/http";
+import * as profileApi from "@/lib/api/profile";
+import * as sectionsApi from "@/lib/api/sections";
+import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
+import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/auth-store";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-function DashboardContent() {
-  const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
-  const router = useRouter();
+// No candidate-facing analytics endpoint exists yet (only §8 admin metrics,
+// which are site-wide, not per-candidate) — these two stay illustrative
+// placeholders matching the template, same as the template's own mock data.
+const STATIC_STATS = [
+  { label: "Portfolio visitors", value: "1,284", delta: "+18% this week", icon: "👁" },
+  { label: "AI tokens used", value: "412K", delta: "of 1M monthly quota", icon: "⚡" },
+];
 
-  const handleLogout = async () => {
-    await logout();
-    router.push("/login");
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
-        <Logo variant="default" />
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <Button variant="secondary" className="w-auto px-4 py-2" onClick={handleLogout}>
-            Sign out
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-2xl px-6 py-16 text-center">
-        <p className="text-sm font-medium text-accent">Welcome back</p>
-        <h1 className="mt-2 font-serif text-3xl font-semibold text-foreground">
-          {user?.email}
-        </h1>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
-          Your dashboard — profile, CV, portfolio sections, and recruiter conversations — is
-          still under construction. Check back soon.
-        </p>
-      </main>
-    </div>
-  );
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning!";
+  if (hour < 18) return "Good afternoon!";
+  return "Good evening!";
 }
 
-export default function DashboardPage() {
+export default function DashboardHomePage() {
+  const authed = useAuthedRequest();
+  const user = useAuthStore((state) => state.user);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<dashboardApi.ConversationSummary[]>([]);
+  const [profile, setProfile] = useState<profileApi.Profile | null>(null);
+  const [sections, setSections] = useState<sectionsApi.PortfolioSection[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [convos, prof, secs] = await Promise.all([
+          authed((token) => dashboardApi.listConversations(token, 4, 0)),
+          authed((token) => profileApi.getProfile(token)),
+          authed((token) => sectionsApi.getSections(token)),
+        ]);
+        if (cancelled) return;
+        setConversations(convos);
+        setProfile(prof);
+        setSections(secs);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof ApiError ? err.message : "Couldn't load your dashboard.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const intro = sections.find((s) => s.section_type === "intro");
+  const summary = sections.find((s) => s.section_type === "summary");
+  const checklist = [
+    { label: "Full name set", done: Boolean(profile?.full_name) },
+    { label: "Intro section approved", done: intro?.status === "approved" },
+    { label: "Summary section approved", done: summary?.status === "approved" },
+  ];
+
+  const statCards = [
+    STATIC_STATS[0],
+    { label: "Recruiter chats", value: String(conversations.length), delta: "recent conversations", icon: "💬" },
+    STATIC_STATS[1],
+  ];
+
+  const displayName = profile?.full_name || user?.email || "";
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center py-24">
+        <Spinner />
+      </div>
+    );
+  }
+
   return (
-    <RequireAuth>
-      <DashboardContent />
-    </RequireAuth>
+    <div className="p-8 pb-10">
+      {error && <Alert className="mb-5">{error}</Alert>}
+
+      <h1 className="font-serif text-[26px] font-semibold text-foreground">
+        {greeting()} <span className="font-serif italic text-accent">{displayName}</span>
+      </h1>
+      <p className="mt-1.5 text-[13.5px] text-muted">Here&apos;s how your chatfolio is doing today.</p>
+
+      <div className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+        {statCards.map((stat) => (
+          <Card key={stat.label}>
+            <div className="flex items-center justify-between">
+              <span className="text-[12.5px] text-muted">{stat.label}</span>
+              <span className="text-base">{stat.icon}</span>
+            </div>
+            <div className="mt-2.5 font-serif text-[28px] font-semibold text-foreground">
+              {stat.value}
+            </div>
+            <div className="mt-1.5 text-[11.5px] text-success-fg">{stat.delta}</div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <Card>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-foreground">
+              Recent recruiter conversations
+            </span>
+            <Link
+              href="/dashboard/conversations"
+              className="text-[12.5px] font-semibold text-accent hover:text-accent-hover"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="mt-3.5 flex flex-col">
+            {conversations.length === 0 && (
+              <p className="py-4 text-[13px] text-muted">No recruiter conversations yet.</p>
+            )}
+            {conversations.map((conv) => {
+              const meta = conv.recruiter_metadata;
+              const initials = (meta?.name ?? "??").slice(0, 2).toUpperCase();
+              return (
+                <div
+                  key={conv.id}
+                  className="flex items-center justify-between border-b border-border py-3 last:border-b-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-background text-xs font-semibold text-muted">
+                      {initials}
+                    </div>
+                    <div>
+                      <div className="text-[13.5px] font-medium text-foreground">
+                        {meta?.name ?? "Anonymous recruiter"}
+                        {meta?.company ? ` · ${meta.company}` : ""}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted">
+                        {meta?.role ?? "Role unknown"} ·{" "}
+                        {new Date(conv.last_active_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  {conv.is_flagged && <StatusPill tone="danger">Flagged</StatusPill>}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="flex flex-col">
+          <span className="text-sm font-semibold text-foreground">Publish checklist</span>
+          <div className="mt-4 flex flex-col gap-2.5">
+            {checklist.map((item) => (
+              <div key={item.label} className="flex items-center gap-2.5 text-[13px]">
+                <span
+                  className={cn(
+                    "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[11px]",
+                    item.done ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg"
+                  )}
+                >
+                  {item.done ? "✓" : "!"}
+                </span>
+                <span className={item.done ? "text-foreground" : "text-muted"}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+          <Link
+            href="/dashboard/publish"
+            className="mt-4 flex w-full items-center justify-center rounded-[10px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-accent-foreground hover:bg-accent-hover"
+          >
+            Publish chatfolio
+          </Link>
+        </Card>
+      </div>
+    </div>
   );
 }

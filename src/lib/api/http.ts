@@ -11,6 +11,7 @@ export class ApiError extends Error {
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
+  query?: Record<string, string | number | boolean | undefined>;
   accessToken?: string;
   signal?: AbortSignal;
 };
@@ -19,21 +20,29 @@ const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, accessToken, signal }: RequestOptions = {}
+  { method = "GET", body, query, accessToken, signal }: RequestOptions = {}
 ): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined && !isFormData) headers["Content-Type"] = "application/json";
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const search = query
+    ? new URLSearchParams(
+        Object.entries(query).filter(([, v]) => v !== undefined) as [string, string][]
+      ).toString()
+    : "";
 
   let response: Response;
   try {
     // Same-origin path — Next.js rewrites this to the real backend
     // server-side (see next.config.ts), so the browser never makes a
     // cross-origin request and CORS never comes into play.
-    response = await fetch(`/api/v1${path}`, {
+    response = await fetch(`/api/v1${path}${search ? `?${search}` : ""}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
       signal,
     });
   } catch {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, Lora } from "next/font/google";
+import { SessionRestorer } from "@/components/auth/session-restorer";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col font-sans">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <SessionRestorer />
           {children}
         </ThemeProvider>
       </body>
