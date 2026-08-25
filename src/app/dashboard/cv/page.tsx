@@ -3,6 +3,7 @@
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { StatusPill } from "@/components/ui/status-pill";
+import { CvParsedReview } from "@/components/dashboard/cv-parsed-review";
 import * as cvApi from "@/lib/api/cv";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
@@ -135,14 +136,24 @@ export default function CvUploadPage() {
             </div>
           </div>
           {job && (
-            <StatusPill tone={STATUS_TONE[job.status]}>{STATUS_LABEL[job.status]}</StatusPill>
+            <StatusPill tone={STATUS_TONE[job.status]}>
+              {job.status === "pending" || job.status === "processing" ? (
+                <span className="text-shimmer font-semibold">{STATUS_LABEL[job.status]}</span>
+              ) : (
+                STATUS_LABEL[job.status]
+              )}
+            </StatusPill>
           )}
-          {busy && !job && <StatusPill tone="accent">Uploading…</StatusPill>}
+          {busy && !job && (
+            <StatusPill tone="accent">
+              <span className="text-shimmer font-semibold">Uploading…</span>
+            </StatusPill>
+          )}
         </Card>
       )}
 
       {job?.status === "failed" && (
-        <div className="mt-3.5 flex items-center justify-between gap-3.5 rounded-[10px] bg-danger-bg px-4 py-3.5">
+        <div className="mt-3.5 flex items-center justify-between gap-3.5 rounded-[10px] bg-danger-bg px-4 py-3.5 animate-fade-slide-in">
           <span className="text-[12.5px] font-semibold text-danger-fg">
             {job.error_message ?? "Could not extract text."}
           </span>
@@ -158,10 +169,13 @@ export default function CvUploadPage() {
       )}
 
       {job?.status === "parsed" && (
-        <p className="mt-3.5 text-[12.5px] text-success-fg">
-          Parsed successfully — review the extracted details on your Profile, Experience, and
-          Skills pages.
-        </p>
+        <>
+          <p className="mt-3.5 text-[12.5px] text-success-fg animate-fade-slide-in">
+            Parsed successfully — review what we found below before adding anything to your
+            profile.
+          </p>
+          {job.parsed_json && <CvParsedReview parsed={job.parsed_json} />}
+        </>
       )}
     </div>
   );

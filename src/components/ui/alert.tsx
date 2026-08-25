@@ -12,7 +12,7 @@ export function Alert({ variant = "danger", children, className }: AlertProps) {
     <div
       role={variant === "danger" ? "alert" : "status"}
       className={cn(
-        "rounded-lg px-3 py-2.5 text-[13px] leading-snug",
+        "animate-fade-slide-in rounded-lg px-3 py-2.5 text-[13px] leading-snug",
         variant === "danger" && "bg-danger-bg text-danger-fg",
         variant === "success" && "bg-success-bg text-success-fg",
         variant === "muted" && "bg-surface-strong text-muted border border-border",

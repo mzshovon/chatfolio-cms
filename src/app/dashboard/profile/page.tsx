@@ -10,6 +10,7 @@ import * as profileApi from "@/lib/api/profile";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { cn } from "@/lib/cn";
+import { isoToMonth, monthToIso } from "@/lib/date";
 import { useEffect, useState } from "react";
 
 type Tab = "profile" | "experience" | "projects" | "skills" | "education";
@@ -24,13 +25,6 @@ const TABS: { id: Tab; label: string }[] = [
 
 const fieldClass =
   "w-full rounded-[9px] border border-border bg-surface-strong px-3 py-2.5 text-[13px] text-foreground outline-none focus:border-accent";
-
-function isoToMonth(iso: string | null) {
-  return iso ? iso.slice(0, 7) : "";
-}
-function monthToIso(month: string) {
-  return month ? `${month}-01` : null;
-}
 
 type DraftExperience = profileApi.ExperienceInput & { id: string; isNew: boolean; saving: boolean };
 type DraftProject = Omit<profileApi.ProjectInput, "tech_stack"> & {
