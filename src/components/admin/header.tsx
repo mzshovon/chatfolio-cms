@@ -1,6 +1,6 @@
 "use client";
 
-import { NAV_ITEMS } from "@/components/dashboard/nav-items";
+import { ADMIN_NAV_ITEMS } from "@/components/admin/nav-items";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuthStore } from "@/store/auth-store";
 import { useRouter, usePathname } from "next/navigation";
@@ -14,7 +14,7 @@ function initialsFromEmail(email: string) {
   return chars.filter(Boolean).join("").toUpperCase();
 }
 
-export function Header() {
+export function AdminHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -22,8 +22,8 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const activeLabel =
-    NAV_ITEMS.find((item) =>
-      item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)
+    ADMIN_NAV_ITEMS.find((item) =>
+      item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href)
     )?.label ?? "Dashboard";
 
   const onSignOut = async () => {
@@ -45,7 +45,7 @@ export function Header() {
             onClick={() => setMenuOpen((v) => !v)}
             className="flex items-center gap-2.5 rounded-[10px] px-2 py-1.5 hover:bg-surface"
           >
-            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-accent-tint text-[13px] font-semibold text-accent">
+            <div className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-brand-bg text-[13px] font-semibold text-accent">
               {user ? initialsFromEmail(user.email) : ""}
             </div>
             <div className="hidden text-left sm:block">
@@ -59,24 +59,13 @@ export function Header() {
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
               <div className="absolute right-0 top-[52px] z-20 flex w-[220px] flex-col gap-0.5 rounded-[10px] border border-border bg-surface-strong p-1.5 shadow-lg">
-                {user?.role === "admin" && (
-                  <>
-                    <Link
-                      href="/admin"
-                      onClick={() => setMenuOpen(false)}
-                      className="rounded-md px-2.5 py-2 text-[13px] text-foreground hover:bg-surface"
-                    >
-                      Switch to admin view
-                    </Link>
-                    <div className="my-1 h-px bg-border" />
-                  </>
-                )}
-                <span
-                  title="Available once your chatfolio is published"
-                  className="cursor-not-allowed rounded-md px-2.5 py-2 text-[13px] text-muted-subtle"
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-md px-2.5 py-2 text-[13px] text-foreground hover:bg-surface"
                 >
-                  View public portfolio
-                </span>
+                  Switch to candidate view
+                </Link>
                 <span
                   title="Account settings aren't available yet"
                   className="cursor-not-allowed rounded-md px-2.5 py-2 text-[13px] text-muted-subtle"

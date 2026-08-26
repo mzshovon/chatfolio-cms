@@ -4,9 +4,10 @@ The candidate/admin-facing CMS for Chatfolio — Next.js 16 (App Router), React 
 TypeScript, and Tailwind CSS v4.
 
 Built so far: the **auth journey** (login, registration, forgot/reset password, 2FA
-login verification) and the **candidate dashboard journey** (dashboard home, profile
-builder, CV upload, portfolio sections, publish settings, recruiter conversations).
-Admin views aren't built yet. See
+login verification), the **candidate dashboard journey** (dashboard home, profile
+builder, CV upload — with a review-before-import step for parsed CV data —, portfolio
+sections, publish settings, recruiter conversations), and the **admin journey**
+(dashboard home, users, roles, permissions, chatfolios, metrics, failed CV jobs). See
 [`Docs/ADMIN_PANEL_UI_REFERENCE.md`](./Docs/ADMIN_PANEL_UI_REFERENCE.md) for the backend
 contract everything here is built against.
 
@@ -28,14 +29,20 @@ src/
     (auth)/login, (auth)/register,                    guest-only route pages
     (auth)/forgot-password, (auth)/reset-password,     (GuestOnly, see below)
     (auth)/verify-2fa
-    dashboard/                                          authenticated shell (RequireAuth)
+    dashboard/                                          candidate shell (RequireAuth)
       layout.tsx                                        sidebar + header, wraps every page below
       page.tsx                                           dashboard home
       profile/, cv/, sections/, publish/, conversations/  one page each
+    admin/                                               admin shell (RequireAdmin)
+      layout.tsx                                        separate sidebar + header, "Chatfolio Admin"
+      page.tsx                                           admin dashboard home
+      users/, users/add/, users/[id]/edit/,
+      roles/, permissions/, chatfolios/, metrics/, cv-jobs/
   components/
     ui/          generic, reusable primitives (Button, TextField, Alert, ThemeToggle, …)
-    auth/        auth-journey composition (AuthShell, RequireAuth, GuestOnly, …)
-    dashboard/   dashboard shell composition (Sidebar, Header, nav-items)
+    auth/        auth-journey composition (AuthShell, RequireAuth, RequireAdmin, GuestOnly, …)
+    dashboard/   candidate shell composition (Sidebar, Header, nav-items)
+    admin/       admin shell composition (Sidebar, Header, nav-items)
   lib/
     api/         fetch wrapper + typed endpoint calls, one file per Docs section
     validation/  zod schemas shared by react-hook-form
@@ -97,6 +104,32 @@ Everything under `/dashboard` calls the real backend except where no endpoint ex
 - Two-factor **enrollment** (Docs §2.5 — turning 2FA on from account settings) isn't
   built; only login-time 2FA *verification* (§2.6) is, since enrollment needs an
   account-settings surface that doesn't exist yet.
+
+## Admin journey — what's real vs. preview-only
+
+Docs §8 only defines five admin endpoints: list users, list/unpublish chatfolios, get
+metrics, and list/retry failed CV jobs. Everything built on top of those is real and
+live. Everything else the templates called for has **no backend endpoint at all** — no
+create/edit/ban/delete-user, no roles or permissions system — so those pages are
+explicitly labeled preview-only (`PreviewBanner` component) rather than half-wired or
+skipped:
+
+- **Real**: admin dashboard home (metrics + recent chatfolios + failed-job preview,
+  with working retry), Users list (real data, real pagination via `limit`/`offset` —
+  there's no total-count field so "Next" is just "did we get a full page back"),
+  Chatfolios (real list + filter + unpublish), Metrics (fully real), Failed CV Jobs
+  (real list + retry).
+- **Preview-only, local state, resets on reload**: ban/delete/edit on the Users list,
+  the Add User and Edit User forms, and the entire Roles/Permissions pages (a user's
+  `role` is a fixed field from the backend's perspective — there's no endpoint to change
+  it, let alone a granular permission system). The Edit User page gets `email`/`role`
+  via query params from the row that linked to it, since there's no GET-by-id endpoint
+  to fetch a single user.
+- `RequireAdmin` (`src/components/auth/require-admin.tsx`) mirrors `RequireAuth` plus a
+  `role === "admin"` check — same "UX nicety, not the security boundary" caveat the docs
+  give for this (§8): the backend 403s every admin endpoint for a non-admin token
+  regardless. A signed-in admin can jump between the two shells via "Switch to admin
+  view" / "Switch to candidate view" in each header's profile menu.
 
 ## Talking to the backend (and why there's no CORS setup)
 
