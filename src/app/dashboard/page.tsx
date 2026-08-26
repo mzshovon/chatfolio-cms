@@ -14,13 +14,9 @@ import { useAuthStore } from "@/store/auth-store";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-// No candidate-facing analytics endpoint exists yet (only §8 admin metrics,
-// which are site-wide, not per-candidate) — these two stay illustrative
-// placeholders matching the template, same as the template's own mock data.
-const STATIC_STATS = [
-  { label: "Portfolio visitors", value: "1,284", delta: "+18% this week", icon: "👁" },
-  { label: "AI tokens used", value: "412K", delta: "of 1M monthly quota", icon: "⚡" },
-];
+function formatCompact(value: number) {
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
 
 function greeting() {
   const hour = new Date().getHours();
@@ -38,20 +34,23 @@ export default function DashboardHomePage() {
   const [conversations, setConversations] = useState<dashboardApi.ConversationSummary[]>([]);
   const [profile, setProfile] = useState<profileApi.Profile | null>(null);
   const [sections, setSections] = useState<sectionsApi.PortfolioSection[]>([]);
+  const [analytics, setAnalytics] = useState<dashboardApi.DashboardAnalytics | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [convos, prof, secs] = await Promise.all([
+        const [convos, prof, secs, stats] = await Promise.all([
           authed((token) => dashboardApi.listConversations(token, 4, 0)),
           authed((token) => profileApi.getProfile(token)),
           authed((token) => sectionsApi.getSections(token)),
+          authed((token) => dashboardApi.getAnalytics(token)),
         ]);
         if (cancelled) return;
         setConversations(convos);
         setProfile(prof);
         setSections(secs);
+        setAnalytics(stats);
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof ApiError ? err.message : "Couldn't load your dashboard.");
@@ -74,9 +73,21 @@ export default function DashboardHomePage() {
   ];
 
   const statCards = [
-    STATIC_STATS[0],
+    {
+      label: "Portfolio visitors",
+      value: analytics ? formatCompact(analytics.portfolio_visitors_total) : "—",
+      delta: analytics
+        ? `${analytics.portfolio_visitors_delta_pct >= 0 ? "+" : ""}${analytics.portfolio_visitors_delta_pct}% this week`
+        : "",
+      icon: "👁",
+    },
     { label: "Recruiter chats", value: String(conversations.length), delta: "recent conversations", icon: "💬" },
-    STATIC_STATS[1],
+    {
+      label: "AI tokens used",
+      value: analytics ? formatCompact(analytics.ai_tokens_used) : "—",
+      delta: analytics ? `of ${formatCompact(analytics.ai_tokens_monthly_quota)} monthly quota` : "",
+      icon: "⚡",
+    },
   ];
 
   const displayName = profile?.full_name || user?.email || "";

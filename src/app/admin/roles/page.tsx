@@ -1,10 +1,14 @@
 "use client";
 
+import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PreviewBanner } from "@/components/ui/preview-banner";
+import { Spinner } from "@/components/ui/spinner";
+import * as adminApi from "@/lib/api/admin";
+import { ApiError } from "@/lib/api/http";
+import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { cn } from "@/lib/cn";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const ALL_PERMISSIONS = [
   "users.view",
@@ -16,33 +20,53 @@ const ALL_PERMISSIONS = [
   "cvjobs.retry",
 ];
 
-type RoleRow = { id: number; name: string; description: string; permissions: string[] };
-
-const INITIAL_ROLES: RoleRow[] = [
-  { id: 1, name: "Admin", description: "Full access to all admin views and actions.", permissions: [...ALL_PERMISSIONS] },
-  { id: 2, name: "Candidate", description: "Manages their own portfolio and chats.", permissions: [] },
-  { id: 3, name: "Reviewer", description: "Read-only access to chatfolios and metrics.", permissions: ["chatfolios.view", "metrics.view"] },
-];
+const PAGE_SIZE = 20;
 
 const fieldClass =
   "w-full rounded-[9px] border border-border bg-surface-strong px-3 py-2.5 text-[13px] text-foreground outline-none focus:border-accent";
 
 export default function AdminRolesPage() {
-  const [roles, setRoles] = useState<RoleRow[]>(INITIAL_ROLES);
+  const authed = useAuthedRequest();
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [roles, setRoles] = useState<adminApi.AdminRole[]>([]);
+  const [saving, setSaving] = useState(false);
+
   const [formOpen, setFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: "", description: "", permissions: [] as string[] });
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await authed((token) => adminApi.listRoles(token, PAGE_SIZE, 0));
+        if (!cancelled) setRoles(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "Couldn't load roles.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openAdd = () => {
     setEditingId(null);
     setDraft({ name: "", description: "", permissions: [] });
     setFormOpen(true);
+    setError(null);
   };
-  const openEdit = (r: RoleRow) => {
+  const openEdit = (r: adminApi.AdminRole) => {
     setEditingId(r.id);
     setDraft({ name: r.name, description: r.description, permissions: [...r.permissions] });
     setFormOpen(true);
+    setError(null);
   };
   const togglePermission = (perm: string) => {
     setDraft((prev) => ({
@@ -52,13 +76,41 @@ export default function AdminRolesPage() {
         : [...prev.permissions, perm],
     }));
   };
-  const saveForm = () => {
-    if (editingId) {
-      setRoles((prev) => prev.map((r) => (r.id === editingId ? { ...r, ...draft } : r)));
-    } else {
-      setRoles((prev) => [...prev, { id: Date.now(), ...draft }]);
+
+  const saveForm = async () => {
+    if (!draft.name.trim()) {
+      setError("Role name is required.");
+      return;
     }
-    setFormOpen(false);
+    setSaving(true);
+    setError(null);
+    try {
+      if (editingId) {
+        const updated = await authed((token) => adminApi.updateRole(token, editingId, draft));
+        setRoles((prev) => prev.map((r) => (r.id === editingId ? updated : r)));
+      } else {
+        const created = await authed((token) => adminApi.createRole(token, draft));
+        setRoles((prev) => [...prev, created]);
+      }
+      setFormOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't save this role.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onConfirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
+    setError(null);
+    try {
+      await authed((token) => adminApi.deleteRole(token, id));
+      setRoles((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't delete this role.");
+    }
   };
 
   const confirmRole = roles.find((r) => r.id === confirmDeleteId);
@@ -81,13 +133,7 @@ export default function AdminRolesPage() {
         </button>
       </div>
 
-      <div className="mt-4">
-        <PreviewBanner>
-          Preview only — the API has no roles/permissions system yet (a user&apos;s role is a
-          fixed field, not editable via any endpoint). Everything here lives only in this
-          browser tab and resets on reload.
-        </PreviewBanner>
-      </div>
+      {error && <Alert className="mt-4">{error}</Alert>}
 
       {formOpen && (
         <Card className="mt-4 flex flex-col gap-3.5">
@@ -141,62 +187,67 @@ export default function AdminRolesPage() {
             <button
               type="button"
               onClick={saveForm}
-              className="rounded-[9px] bg-accent px-4 py-2.5 text-[13px] font-semibold text-accent-foreground"
+              disabled={saving}
+              className="rounded-[9px] bg-accent px-4 py-2.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-60"
             >
-              {editingId ? "Save changes" : "Add role"}
+              {saving ? "Saving…" : editingId ? "Save changes" : "Add role"}
             </button>
           </div>
         </Card>
       )}
 
-      <div className="mt-4 flex flex-col gap-3">
-        {roles.map((role) => (
-          <Card key={role.id}>
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-[14.5px] font-semibold text-foreground">{role.name}</div>
-                <div className="mt-0.5 text-[12.5px] text-muted">{role.description}</div>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Spinner />
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-col gap-3">
+          {roles.length === 0 && <p className="text-[13px] text-muted">No roles yet.</p>}
+          {roles.map((role) => (
+            <Card key={role.id}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-[14.5px] font-semibold text-foreground">{role.name}</div>
+                  <div className="mt-0.5 text-[12.5px] text-muted">{role.description}</div>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(role)}
+                    className="rounded-[7px] border border-border bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-foreground"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(role.id)}
+                    className="rounded-[7px] border border-danger-fg/30 bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-danger-fg"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div className="flex shrink-0 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => openEdit(role)}
-                  className="rounded-[7px] border border-border bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-foreground"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDeleteId(role.id)}
-                  className="rounded-[7px] border border-danger-fg/30 bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-danger-fg"
-                >
-                  Delete
-                </button>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {(role.permissions.length ? role.permissions : ["No permissions"]).map((p) => (
+                  <span
+                    key={p}
+                    className="rounded-full bg-accent-tint px-2.5 py-1 text-[11px] font-semibold text-accent"
+                  >
+                    {p}
+                  </span>
+                ))}
               </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {(role.permissions.length ? role.permissions : ["No permissions"]).map((p) => (
-                <span
-                  key={p}
-                  className="rounded-full bg-accent-tint px-2.5 py-1 text-[11px] font-semibold text-accent"
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {confirmRole && (
         <ConfirmDialog
           title="Delete this role?"
-          description={`Users assigned to "${confirmRole.name}" will need a new role. This is a local preview only.`}
+          description={`Users assigned to "${confirmRole.name}" will need a new role.`}
           onCancel={() => setConfirmDeleteId(null)}
-          onConfirm={() => {
-            setRoles((prev) => prev.filter((r) => r.id !== confirmDeleteId));
-            setConfirmDeleteId(null);
-          }}
+          onConfirm={onConfirmDelete}
         />
       )}
     </div>

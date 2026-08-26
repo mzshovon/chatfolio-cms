@@ -32,7 +32,8 @@ src/
     dashboard/                                          candidate shell (RequireAuth)
       layout.tsx                                        sidebar + header, wraps every page below
       page.tsx                                           dashboard home
-      profile/, cv/, sections/, publish/, conversations/  one page each
+      profile/, cv/, sections/, publish/,
+      conversations/, settings/                           one page each
     admin/                                               admin shell (RequireAdmin)
       layout.tsx                                        separate sidebar + header, "Chatfolio Admin"
       page.tsx                                           admin dashboard home
@@ -91,40 +92,43 @@ surfaced. If that changes, reverting `settleSession`/`getValidAccessToken` in
 
 ## What's static vs. live
 
-Everything under `/dashboard` calls the real backend except where no endpoint exists yet
-— those stay as illustrative static UI rather than being half-wired or omitted:
+Everything under `/dashboard` now calls the real backend. The gaps that used to force
+static placeholders were closed once the backend implemented the endpoints tracked in
+[`Docs/Required_API_Doc.md`](./Docs/Required_API_Doc.md):
 
-- **Dashboard home**: "Portfolio visitors" and "AI tokens used" stat cards are fixed
-  placeholders (no candidate-facing analytics endpoint exists — only §8's site-wide admin
-  metrics). "Recruiter chats" is real. The conversations preview and publish checklist
-  are both real.
-- **Header profile menu**: "View public portfolio" and "Account settings" are
-  intentionally inert (no public-site link data or account-settings endpoint exists yet).
-  "Sign out" is real.
-- Two-factor **enrollment** (Docs §2.5 — turning 2FA on from account settings) isn't
-  built; only login-time 2FA *verification* (§2.6) is, since enrollment needs an
-  account-settings surface that doesn't exist yet.
+- **Dashboard home**: "Portfolio visitors" and "AI tokens used" stat cards come from
+  `GET /v1/dashboard/analytics`. "Recruiter chats" is real. The conversations preview
+  and publish checklist are both real.
+- **Header profile menu → Account settings**: `/dashboard/settings` (real, both roles)
+  covers `POST /auth/change-password` and `PATCH /auth/change-email`. "View public
+  portfolio" is still inert — the data exists (`portfolio-settings.subdomain`), it's
+  just an unbuilt frontend feature, not a backend gap. "Sign out" is real.
+- Two-factor **enrollment** (Docs §2.5 — turning 2FA on from account settings) still
+  isn't built; only login-time 2FA *verification* (§2.6) is. Account settings now has a
+  real surface to build it on, but enrollment itself is a separate, not-yet-requested
+  feature.
 
 ## Admin journey — what's real vs. preview-only
 
-Docs §8 only defines five admin endpoints: list users, list/unpublish chatfolios, get
-metrics, and list/retry failed CV jobs. Everything built on top of those is real and
-live. Everything else the templates called for has **no backend endpoint at all** — no
-create/edit/ban/delete-user, no roles or permissions system — so those pages are
-explicitly labeled preview-only (`PreviewBanner` component) rather than half-wired or
-skipped:
+Every admin page is now real and live, backed by the endpoints tracked in
+[`Docs/Required_API_Doc.md`](./Docs/Required_API_Doc.md) once the backend implemented
+them:
 
-- **Real**: admin dashboard home (metrics + recent chatfolios + failed-job preview,
-  with working retry), Users list (real data, real pagination via `limit`/`offset` —
-  there's no total-count field so "Next" is just "did we get a full page back"),
-  Chatfolios (real list + filter + unpublish), Metrics (fully real), Failed CV Jobs
-  (real list + retry).
-- **Preview-only, local state, resets on reload**: ban/delete/edit on the Users list,
-  the Add User and Edit User forms, and the entire Roles/Permissions pages (a user's
-  `role` is a fixed field from the backend's perspective — there's no endpoint to change
-  it, let alone a granular permission system). The Edit User page gets `email`/`role`
-  via query params from the row that linked to it, since there's no GET-by-id endpoint
-  to fetch a single user.
+- Users list: real data, real ban/unban (`PATCH .../users/{id}`) and delete
+  (`DELETE .../users/{id}`), real pagination via `limit`/`offset` — there's no
+  total-count field so "Next" is just "did we get a full page back". Add User
+  (`POST .../users`) and Edit User (`GET`/`PATCH .../users/{id}`, fetched by the `id` in
+  the route rather than query-string prefill) are both real.
+- Roles and Permissions: full `GET/POST/PATCH/DELETE` CRUD against
+  `/admin/roles(/{id})` and `/admin/permissions(/{id})`. A permission's `key` is treated
+  as immutable after creation in the UI (only `description` is editable), matching the
+  open question the gap doc raised about renaming keys that roles reference.
+- Admin dashboard home: `total_portfolio_visitors`, `recruiters_engaged`,
+  `ai_tokens_used`, and `ai_tokens_monthly_quota` are additive fields read off the
+  existing `GET /admin/metrics` (Option A from the gap doc) — those fields are typed as
+  optional in `AdminMetrics` so a stat card degrades to `—` rather than crashing if a
+  given deploy hasn't rolled them out yet. Chatfolios (list + filter + unpublish),
+  Metrics, and Failed CV Jobs (list + retry) were already real before this pass.
 - `RequireAdmin` (`src/components/auth/require-admin.tsx`) mirrors `RequireAuth` plus a
   `role === "admin"` check — same "UX nicety, not the security boundary" caveat the docs
   give for this (§8): the backend 403s every admin endpoint for a non-admin token

@@ -12,6 +12,26 @@ export function listUsers(accessToken: string, limit = 20, offset = 0) {
   return apiRequest<AdminUser[]>("/admin/users", { accessToken, query: { limit, offset } });
 }
 
+export function getUser(accessToken: string, id: string) {
+  return apiRequest<AdminUser>(`/admin/users/${id}`, { accessToken });
+}
+
+export type CreateUserInput = { email: string; password: string; role: Role; is_active: boolean };
+
+export function createUser(accessToken: string, input: CreateUserInput) {
+  return apiRequest<AdminUser>("/admin/users", { method: "POST", accessToken, body: input });
+}
+
+export type UpdateUserInput = Partial<{ email: string; role: Role; is_active: boolean }>;
+
+export function updateUser(accessToken: string, id: string, input: UpdateUserInput) {
+  return apiRequest<AdminUser>(`/admin/users/${id}`, { method: "PATCH", accessToken, body: input });
+}
+
+export function deleteUser(accessToken: string, id: string) {
+  return apiRequest<void>(`/admin/users/${id}`, { method: "DELETE", accessToken });
+}
+
 export type AdminChatfolio = {
   id: string;
   slug: string;
@@ -48,6 +68,13 @@ export type AdminMetrics = {
   flagged_chat_sessions: number;
   cv_parse_success_count: number;
   cv_parse_failed_count: number;
+  // Added per Required_API_Doc.md §6 (Option A — additive fields on the
+  // existing endpoint). Optional so this still degrades gracefully if a
+  // given backend deploy hasn't rolled them out yet.
+  total_portfolio_visitors?: number;
+  recruiters_engaged?: number;
+  ai_tokens_used?: number;
+  ai_tokens_monthly_quota?: number;
 };
 
 export function getMetrics(accessToken: string) {
@@ -74,4 +101,58 @@ export function retryFailedCvJob(accessToken: string, id: string) {
     method: "POST",
     accessToken,
   });
+}
+
+export type AdminRole = {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+};
+
+export function listRoles(accessToken: string, limit = 20, offset = 0) {
+  return apiRequest<AdminRole[]>("/admin/roles", { accessToken, query: { limit, offset } });
+}
+
+export type RoleInput = { name: string; description: string; permissions: string[] };
+
+export function createRole(accessToken: string, input: RoleInput) {
+  return apiRequest<AdminRole>("/admin/roles", { method: "POST", accessToken, body: input });
+}
+
+export function updateRole(accessToken: string, id: string, input: Partial<RoleInput>) {
+  return apiRequest<AdminRole>(`/admin/roles/${id}`, { method: "PATCH", accessToken, body: input });
+}
+
+export function deleteRole(accessToken: string, id: string) {
+  return apiRequest<void>(`/admin/roles/${id}`, { method: "DELETE", accessToken });
+}
+
+export type AdminPermission = {
+  id: string;
+  key: string;
+  description: string;
+  used_by_roles_count: number;
+};
+
+export function listPermissions(accessToken: string, limit = 20, offset = 0) {
+  return apiRequest<AdminPermission[]>("/admin/permissions", { accessToken, query: { limit, offset } });
+}
+
+export type PermissionInput = { key: string; description: string };
+
+export function createPermission(accessToken: string, input: PermissionInput) {
+  return apiRequest<AdminPermission>("/admin/permissions", { method: "POST", accessToken, body: input });
+}
+
+export function updatePermission(accessToken: string, id: string, input: Partial<PermissionInput>) {
+  return apiRequest<AdminPermission>(`/admin/permissions/${id}`, {
+    method: "PATCH",
+    accessToken,
+    body: input,
+  });
+}
+
+export function deletePermission(accessToken: string, id: string) {
+  return apiRequest<void>(`/admin/permissions/${id}`, { method: "DELETE", accessToken });
 }

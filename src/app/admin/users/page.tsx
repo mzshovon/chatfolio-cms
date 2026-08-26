@@ -3,7 +3,6 @@
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PreviewBanner } from "@/components/ui/preview-banner";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusPill } from "@/components/ui/status-pill";
 import * as adminApi from "@/lib/api/admin";
@@ -23,14 +22,7 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [search, setSearch] = useState("");
-
-  // Ban/delete have no backend endpoint (Docs §8 only defines list/unpublish/
-  // retry for admins) — these are local-only, same as the templates' own
-  // mock behavior, and reset on reload.
-  const [localOverrides, setLocalOverrides] = useState<Record<string, { is_active?: boolean }>>(
-    {}
-  );
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDeleteUser, setConfirmDeleteUser] = useState<adminApi.AdminUser | null>(null);
 
   useEffect(() => {
@@ -54,17 +46,38 @@ export default function AdminUsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
-  const toggleBan = (id: string) => {
-    setLocalOverrides((prev) => {
-      const current = prev[id]?.is_active ?? users.find((u) => u.id === id)?.is_active;
-      return { ...prev, [id]: { is_active: !current } };
-    });
+  const toggleBan = async (u: adminApi.AdminUser) => {
+    setBusyId(u.id);
+    setError(null);
+    try {
+      const updated = await authed((token) =>
+        adminApi.updateUser(token, u.id, { is_active: !u.is_active })
+      );
+      setUsers((prev) => prev.map((row) => (row.id === u.id ? updated : row)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't update this user.");
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const visibleUsers = users
-    .filter((u) => !deletedIds.has(u.id))
-    .filter((u) => u.email.toLowerCase().includes(search.toLowerCase()))
-    .map((u) => ({ ...u, is_active: localOverrides[u.id]?.is_active ?? u.is_active }));
+  const onConfirmDelete = async () => {
+    if (!confirmDeleteUser) return;
+    const target = confirmDeleteUser;
+    setConfirmDeleteUser(null);
+    setBusyId(target.id);
+    setError(null);
+    try {
+      await authed((token) => adminApi.deleteUser(token, target.id));
+      setUsers((prev) => prev.filter((u) => u.id !== target.id));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't delete this user.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const visibleUsers = users.filter((u) => u.email.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="p-8">
@@ -87,14 +100,6 @@ export default function AdminUsersPage() {
             + Add user
           </Link>
         </div>
-      </div>
-
-      <div className="mt-4">
-        <PreviewBanner>
-          Ban, delete, and add-user actions here are local-only previews — the API doesn&apos;t
-          yet support creating, editing, banning, or deleting users, so nothing you do on this
-          page reaches the backend. Changes reset on reload.
-        </PreviewBanner>
       </div>
 
       {error && <Alert className="mt-4">{error}</Alert>}
@@ -137,15 +142,17 @@ export default function AdminUsersPage() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => toggleBan(u.id)}
-                  className="whitespace-nowrap rounded-[7px] border border-border bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-foreground"
+                  onClick={() => toggleBan(u)}
+                  disabled={busyId === u.id}
+                  className="whitespace-nowrap rounded-[7px] border border-border bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-foreground disabled:opacity-60"
                 >
                   {u.is_active ? "Ban" : "Unban"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDeleteUser(u)}
-                  className="whitespace-nowrap rounded-[7px] border border-danger-fg/30 bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-danger-fg"
+                  disabled={busyId === u.id}
+                  className="whitespace-nowrap rounded-[7px] border border-danger-fg/30 bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-danger-fg disabled:opacity-60"
                 >
                   Delete
                 </button>
@@ -180,12 +187,9 @@ export default function AdminUsersPage() {
       {confirmDeleteUser && (
         <ConfirmDialog
           title="Delete this user?"
-          description={`${confirmDeleteUser.email} will be removed from this list. This is a local preview only — nothing is deleted on the backend.`}
+          description={`${confirmDeleteUser.email} will be permanently removed. This can't be undone.`}
           onCancel={() => setConfirmDeleteUser(null)}
-          onConfirm={() => {
-            setDeletedIds((prev) => new Set(prev).add(confirmDeleteUser.id));
-            setConfirmDeleteUser(null);
-          }}
+          onConfirm={onConfirmDelete}
         />
       )}
     </div>

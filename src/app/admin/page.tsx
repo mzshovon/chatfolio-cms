@@ -11,14 +11,9 @@ import { useAuthStore } from "@/store/auth-store";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-// No candidate-visitor-analytics or AI-token-usage endpoint exists for admins
-// (only §8's plain counts) — these two stay illustrative placeholders,
-// matching the template's own mock data, same treatment as the candidate
-// dashboard's equivalent stat cards.
-const STATIC_STATS = [
-  { label: "Total visitors", value: "18,432", delta: "+9% this week", icon: "👁" },
-  { label: "AI tokens used", value: "4.2M", delta: "of 10M monthly quota", icon: "⚡" },
-];
+function formatCompact(value: number) {
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
 
 function greeting() {
   const hour = new Date().getHours();
@@ -84,9 +79,27 @@ export default function AdminDashboardPage() {
   }
 
   const statCards = [
-    STATIC_STATS[0],
-    { label: "Recruiters engaged", value: "612", delta: "+34 this week", icon: "🧑‍💼" },
-    STATIC_STATS[1],
+    {
+      label: "Total visitors",
+      value: metrics?.total_portfolio_visitors != null ? formatCompact(metrics.total_portfolio_visitors) : "—",
+      delta: "across all published chatfolios",
+      icon: "👁",
+    },
+    {
+      label: "Recruiters engaged",
+      value: metrics?.recruiters_engaged != null ? String(metrics.recruiters_engaged) : "—",
+      delta: "unique recruiters this month",
+      icon: "🧑‍💼",
+    },
+    {
+      label: "AI tokens used",
+      value: metrics?.ai_tokens_used != null ? formatCompact(metrics.ai_tokens_used) : "—",
+      delta:
+        metrics?.ai_tokens_monthly_quota != null
+          ? `of ${formatCompact(metrics.ai_tokens_monthly_quota)} monthly quota`
+          : "",
+      icon: "⚡",
+    },
     {
       label: "Published chatfolios",
       value: metrics ? String(metrics.published_chatfolios) : "—",

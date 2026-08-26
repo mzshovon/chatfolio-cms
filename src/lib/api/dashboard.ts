@@ -48,3 +48,14 @@ export function markConversationReviewed(accessToken: string, id: string) {
     accessToken,
   });
 }
+
+export type DashboardAnalytics = {
+  portfolio_visitors_total: number;
+  portfolio_visitors_delta_pct: number;
+  ai_tokens_used: number;
+  ai_tokens_monthly_quota: number;
+};
+
+export function getAnalytics(accessToken: string) {
+  return apiRequest<DashboardAnalytics>("/dashboard/analytics", { accessToken });
+}

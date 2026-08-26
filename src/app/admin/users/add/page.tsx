@@ -2,39 +2,55 @@
 
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { PreviewBanner } from "@/components/ui/preview-banner";
+import * as adminApi from "@/lib/api/admin";
+import type { Role } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/http";
+import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const ROLES = [
+const ROLES: { id: Role; name: string; description: string }[] = [
   { id: "admin", name: "Admin", description: "Full access to all admin views and actions." },
   { id: "candidate", name: "Candidate", description: "Manages their own portfolio and chats." },
-  { id: "reviewer", name: "Reviewer", description: "Read-only access to chatfolios and metrics." },
 ];
 
 const fieldClass =
   "w-full rounded-[9px] border border-border bg-surface-strong px-3.5 py-3 text-[13.5px] text-foreground outline-none focus:border-accent";
 
 export default function AdminAddUserPage() {
+  const authed = useAuthedRequest();
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [roleId, setRoleId] = useState("candidate");
+  const [roleId, setRoleId] = useState<Role>("candidate");
   const [isActive, setIsActive] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  const onCreate = () => {
+  const onCreate = async () => {
     if (!email) {
       setFormError("Email is required.");
-      setNotice(null);
+      return;
+    }
+    if (!password || password.length < 8) {
+      setFormError("Temporary password must be at least 8 characters.");
       return;
     }
     setFormError(null);
-    setNotice(
-      "This is a preview form — the API has no endpoint for admin-created users yet, so nothing was actually created."
-    );
+    setCreating(true);
+    try {
+      await authed((token) =>
+        adminApi.createUser(token, { email, password, role: roleId, is_active: isActive })
+      );
+      router.push("/admin/users");
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Couldn't create this user.");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -47,13 +63,6 @@ export default function AdminAddUserPage() {
       </h1>
       <p className="mt-1 text-[13px] text-muted">Invite a candidate or admin and assign their role.</p>
 
-      <div className="mt-4">
-        <PreviewBanner>
-          Preview only — user creation isn&apos;t supported by the API yet. Fill this in freely;
-          clicking Create won&apos;t persist anything.
-        </PreviewBanner>
-      </div>
-
       <Card className="mt-5 flex flex-col gap-3.5">
         <div>
           <div className="mb-1.5 text-xs text-muted">Email</div>
@@ -62,18 +71,8 @@ export default function AdminAddUserPage() {
             onChange={(e) => {
               setEmail(e.target.value);
               setFormError(null);
-              setNotice(null);
             }}
             placeholder="name@example.com"
-            className={fieldClass}
-          />
-        </div>
-        <div>
-          <div className="mb-1.5 text-xs text-muted">Phone</div>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+880 1XXX-XXXXXX"
             className={fieldClass}
           />
         </div>
@@ -81,15 +80,18 @@ export default function AdminAddUserPage() {
           <div className="mb-1.5 text-xs text-muted">Temporary password</div>
           <input
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Assigned on creation"
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFormError(null);
+            }}
+            placeholder="8-128 characters"
             className={fieldClass}
           />
         </div>
 
         <div>
           <div className="mb-1.5 text-xs text-muted">Role assignment</div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {ROLES.map((r) => {
               const checked = roleId === r.id;
               return (
@@ -106,10 +108,7 @@ export default function AdminAddUserPage() {
                     type="radio"
                     name="role"
                     checked={checked}
-                    onChange={() => {
-                      setRoleId(r.id);
-                      setNotice(null);
-                    }}
+                    onChange={() => setRoleId(r.id)}
                     className="mt-1 accent-accent"
                   />
                   <div>
@@ -133,7 +132,6 @@ export default function AdminAddUserPage() {
         </label>
 
         {formError && <Alert>{formError}</Alert>}
-        {notice && <Alert variant="muted">{notice}</Alert>}
 
         <div className="flex justify-end gap-2.5">
           <Link
@@ -145,9 +143,10 @@ export default function AdminAddUserPage() {
           <button
             type="button"
             onClick={onCreate}
-            className="rounded-[9px] bg-accent px-5 py-2.5 text-[13px] font-semibold text-accent-foreground"
+            disabled={creating}
+            className="rounded-[9px] bg-accent px-5 py-2.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-60"
           >
-            Create user
+            {creating ? "Creating…" : "Create user"}
           </button>
         </div>
       </Card>

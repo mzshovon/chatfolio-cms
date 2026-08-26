@@ -2,32 +2,89 @@
 
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { PreviewBanner } from "@/components/ui/preview-banner";
+import { SavedFlash } from "@/components/ui/saved-flash";
+import { Spinner } from "@/components/ui/spinner";
+import * as adminApi from "@/lib/api/admin";
+import type { Role } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/http";
+import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
+import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const ROLES = [
+const ROLES: { id: Role; name: string; description: string }[] = [
   { id: "admin", name: "Admin", description: "Full access to all admin views and actions." },
   { id: "candidate", name: "Candidate", description: "Manages their own portfolio and chats." },
-  { id: "reviewer", name: "Reviewer", description: "Read-only access to chatfolios and metrics." },
 ];
 
 const fieldClass =
   "w-full rounded-[9px] border border-border bg-surface-strong px-3.5 py-3 text-[13.5px] text-foreground outline-none focus:border-accent";
 
 export function EditUserView() {
-  const params = useSearchParams();
-  const initialEmail = params.get("email") ?? "";
-  const initialRole = params.get("role") ?? "candidate";
+  const authed = useAuthedRequest();
+  const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const id = params.id;
 
-  const [email, setEmail] = useState(initialEmail);
-  const [roleId, setRoleId] = useState(initialRole);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savedFlash = useSaveFlash();
+
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const [roleId, setRoleId] = useState<Role>((searchParams.get("role") as Role) ?? "candidate");
   const [isActive, setIsActive] = useState(true);
-  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const user = await authed((token) => adminApi.getUser(token, id));
+        if (cancelled) return;
+        setEmail(user.email);
+        setRoleId(user.role);
+        setIsActive(user.is_active);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "Couldn't load this user.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const initials = (email[0] ?? "?").toUpperCase();
+
+  const onSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await authed((token) =>
+        adminApi.updateUser(token, id, { email, role: roleId, is_active: isActive })
+      );
+      setEmail(updated.email);
+      setRoleId(updated.role);
+      setIsActive(updated.is_active);
+      savedFlash.flash("user");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't save this user.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center py-24">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[640px] p-8">
@@ -46,29 +103,19 @@ export function EditUserView() {
         </div>
       </div>
 
-      <div className="mt-4">
-        <PreviewBanner>
-          Preview only — the API has no user-edit endpoint yet, so saving here doesn&apos;t reach
-          the backend.
-        </PreviewBanner>
-      </div>
-
       <Card className="mt-5 flex flex-col gap-3.5">
         <div>
           <div className="mb-1.5 text-xs text-muted">Email</div>
           <input
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setSaved(false);
-            }}
+            onChange={(e) => setEmail(e.target.value)}
             className={fieldClass}
           />
         </div>
 
         <div>
           <div className="mb-1.5 text-xs text-muted">Role assignment</div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {ROLES.map((r) => {
               const checked = roleId === r.id;
               return (
@@ -85,10 +132,7 @@ export function EditUserView() {
                     type="radio"
                     name="role"
                     checked={checked}
-                    onChange={() => {
-                      setRoleId(r.id);
-                      setSaved(false);
-                    }}
+                    onChange={() => setRoleId(r.id)}
                     className="mt-1 accent-accent"
                   />
                   <div>
@@ -105,22 +149,16 @@ export function EditUserView() {
           <input
             type="checkbox"
             checked={isActive}
-            onChange={(e) => {
-              setIsActive(e.target.checked);
-              setSaved(false);
-            }}
+            onChange={(e) => setIsActive(e.target.checked)}
             className="accent-accent"
           />
           Account active
         </label>
 
-        {saved && (
-          <Alert variant="muted">
-            Nothing was actually saved — this preview form has no backend to save to.
-          </Alert>
-        )}
+        {error && <Alert>{error}</Alert>}
 
-        <div className="flex justify-end gap-2.5">
+        <div className="flex items-center justify-end gap-2.5">
+          <SavedFlash state={savedFlash.get("user")} />
           <Link
             href="/admin/users"
             className="rounded-[9px] border border-border px-4 py-2.5 text-[13px] font-semibold text-foreground"
@@ -129,10 +167,11 @@ export function EditUserView() {
           </Link>
           <button
             type="button"
-            onClick={() => setSaved(true)}
-            className="rounded-[9px] bg-accent px-5 py-2.5 text-[13px] font-semibold text-accent-foreground"
+            onClick={onSave}
+            disabled={saving}
+            className="rounded-[9px] bg-accent px-5 py-2.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-60"
           >
-            Save changes
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
       </Card>

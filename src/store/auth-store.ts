@@ -22,6 +22,7 @@ type AuthState = {
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   getValidAccessToken: () => Promise<string | null>;
+  setUser: (user: authApi.AuthUser) => void;
 };
 
 // The access token stays memory-only (short-lived, cheap to re-derive). The
@@ -150,4 +151,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       inFlightRefresh = null;
     }
   },
+
+  // Lets a page that changes account details (e.g. /dashboard/settings
+  // after a successful email change) reflect the update immediately,
+  // without waiting for the next /auth/refresh or a full reload.
+  setUser: (user) => set({ user }),
 }));

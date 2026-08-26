@@ -66,12 +66,13 @@ export function AdminHeader() {
                 >
                   Switch to candidate view
                 </Link>
-                <span
-                  title="Account settings aren't available yet"
-                  className="cursor-not-allowed rounded-md px-2.5 py-2 text-[13px] text-muted-subtle"
+                <Link
+                  href="/dashboard/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-md px-2.5 py-2 text-[13px] text-foreground hover:bg-surface"
                 >
                   Account settings
-                </span>
+                </Link>
                 <div className="my-1 h-px bg-border" />
                 <button
                   type="button"
