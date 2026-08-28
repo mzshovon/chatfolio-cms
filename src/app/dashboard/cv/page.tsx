@@ -7,6 +7,7 @@ import { CvParsedReview } from "@/components/dashboard/cv-parsed-review";
 import * as cvApi from "@/lib/api/cv";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
+import { setCvUploadedFlag } from "@/lib/onboarding";
 import { useEffect, useRef, useState } from "react";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
@@ -42,6 +43,7 @@ export default function CvUploadPage() {
       try {
         const next = await authed((token) => cvApi.getCvStatus(token, job.id));
         setJob(next);
+        if (next.status === "parsed") setCvUploadedFlag();
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Couldn't check parse status.");
       }

@@ -2,6 +2,8 @@
 
 import { RequireAuth } from "@/components/auth/require-auth";
 import { Header } from "@/components/dashboard/header";
+import { OnboardingTracker } from "@/components/dashboard/onboarding-tracker";
+import { OnboardingTutorial } from "@/components/dashboard/onboarding-tutorial";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { useState, type ReactNode } from "react";
 
@@ -15,6 +17,8 @@ function DashboardShell({ children }: { children: ReactNode }) {
         <Header />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <OnboardingTracker />
+      <OnboardingTutorial />
     </div>
   );
 }

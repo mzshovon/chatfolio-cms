@@ -108,6 +108,42 @@ static placeholders were closed once the backend implemented the endpoints track
   real surface to build it on, but enrollment itself is a separate, not-yet-requested
   feature.
 
+## Candidate onboarding (first-run tutorial + progress tracker)
+
+Ported from `Templates/CMS Candidate Dashboard user journey tutorial.dc.html`, mounted
+once in `src/app/dashboard/layout.tsx` so both persist across every `/dashboard/*` page:
+
+- **`OnboardingTutorial`** (`src/components/dashboard/onboarding-tutorial.tsx`): a
+  4-step modal (Welcome → Upload CV → Approve AI voice → Publish and share) shown once
+  per browser, gated by a `chatfolio-onboarding-seen` localStorage flag — there's no
+  backend field for "has this candidate seen the tour," so this is deliberately
+  client-only state, same as the template's own `localStorage` calls.
+- **`OnboardingTracker`** (`src/components/dashboard/onboarding-tracker.tsx`): the
+  floating "Get chatfolio-ready" checklist / progress pill. Unlike the template's mock
+  data, its four steps are derived from real state: sections all `approved`
+  (`GET /sections`), the slug no longer matching the auto-generated
+  `candidate-<random>` pattern (`GET /portfolio-settings`), and `is_published`. The
+  "Upload your CV" step is the one exception — there's no endpoint to ask "has this
+  candidate ever uploaded a CV" (§4 has upload/status/retry, no list), so
+  `src/app/dashboard/cv/page.tsx` sets a `chatfolio-cv-uploaded` localStorage flag the
+  moment a job reaches `"parsed"`, and the tracker just reads that.
+- Both the tutorial's dismissal and the tracker's open/collapsed state read their
+  initial value via `useSyncExternalStore` rather than `useState` + `useEffect` — the
+  server-rendered HTML has no `localStorage`, so a naive effect would flash the tutorial
+  open (or the tracker in its default state) for one frame before correcting itself.
+  `useSyncExternalStore`'s server-snapshot argument sidesteps that: it renders the
+  "safe" default (tutorial closed, tracker open) on both the server and the very first
+  client paint, then reconciles against the real localStorage value immediately.
+
+**Ideas for making onboarding easier that weren't asked for but seem worth
+considering**: auto-collapsing the tracker to its pill (or hiding it outright) once all
+four steps are done, instead of leaving a static "4 of 4" card sitting in the corner
+forever; linking the tutorial's own step copy directly to the matching tracker
+step/page instead of only closing the modal on "Let's go"; and using the CV-parsed
+webhook moment to *pre-fill* the "Approve AI intro & summary" step's expectations (e.g.
+"2 sections are ready to review") rather than a generic label, since that's the exact
+moment a candidate has the most context on what they just uploaded.
+
 ## Admin journey — what's real vs. preview-only
 
 Every admin page is now real and live, backed by the endpoints tracked in
