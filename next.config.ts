@@ -1,21 +1,31 @@
 import type { NextConfig } from "next";
 
-// Server-only — never exposed to the browser. Set in .env.local.
-const backendUrl = process.env.BACKEND_API_URL?.replace(/\/+$/, "");
+const securityHeaders = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Content-Security-Policy is set per-request in proxy.ts so it can
+  // include a fresh nonce for Next.js's own inline hydration scripts.
+];
 
 const nextConfig: NextConfig = {
-  // Self-contained server + only the node_modules it needs — see Dockerfile.
   output: "standalone",
-  async rewrites() {
-    if (!backendUrl) return [];
-    // Browser calls same-origin `/api/v1/...`; Next's server proxies it to
-    // the real backend. Server-to-server requests aren't subject to CORS,
-    // so this avoids the browser CORS check entirely instead of depending
-    // on the backend sending Access-Control-* headers.
+  reactStrictMode: true,
+  poweredByHeader: false,
+  agentRules: false,
+  experimental: {
+    // Default worker count is CPU count - 1, which is wasteful on small
+    // build hosts (each worker is a separate process). Scale by available
+    // memory instead, capped at 1 as a floor for 1-2GB VPS builds.
+    memoryBasedWorkersCount: true,
+    cpus: 1,
+  },
+  async headers() {
     return [
       {
-        source: "/api/v1/:path*",
-        destination: `${backendUrl}/v1/:path*`,
+        source: "/:path*",
+        headers: securityHeaders,
       },
     ];
   },
