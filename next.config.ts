@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const backendUrl = process.env.BACKEND_API_URL?.replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
+  // Self-contained server + only the node_modules it needs — see Dockerfile.
+  output: "standalone",
   async rewrites() {
     if (!backendUrl) return [];
     // Browser calls same-origin `/api/v1/...`; Next's server proxies it to
