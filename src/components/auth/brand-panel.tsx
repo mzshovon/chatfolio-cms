@@ -1,11 +1,11 @@
-import { Logo } from "@/components/auth/logo";
+import { Wordmark } from "@/components/ui/wordmark";
 
 const TAGS = ["Portfolios", "AI Chat", "Recruiters"];
 
 export function BrandPanel({ quote }: { quote: string }) {
   return (
     <div className="hidden w-[320px] shrink-0 flex-col justify-between bg-brand-bg p-10 text-brand-fg md:flex">
-      <Logo />
+      <Wordmark className="px-3 py-2" imageClassName="h-6" />
 
       <div>
         <p className="font-serif text-2xl italic leading-snug text-brand-accent">

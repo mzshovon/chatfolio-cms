@@ -20,6 +20,11 @@ const lora = Lora({
 export const metadata: Metadata = {
   title: "Chatfolio CMS",
   description: "Manage chats, candidates, and portfolio content.",
+  icons: {
+    icon: "/chatfolio-icon.png",
+    shortcut: "/chatfolio-icon.png",
+    apple: "/chatfolio-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

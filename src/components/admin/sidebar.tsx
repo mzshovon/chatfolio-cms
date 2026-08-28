@@ -1,7 +1,9 @@
 "use client";
 
 import { ADMIN_NAV_ITEMS } from "@/components/admin/nav-items";
+import { Wordmark } from "@/components/ui/wordmark";
 import { cn } from "@/lib/cn";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -22,11 +24,16 @@ export function AdminSidebar({ open, onToggle }: SidebarProps) {
     >
       <div className="flex h-8 items-center justify-between gap-2.5 px-1">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] bg-accent font-serif text-[13px] font-bold text-accent-foreground">
-            C
-          </div>
-          {open && (
-            <span className="whitespace-nowrap text-sm font-semibold">Chatfolio Admin</span>
+          {open ? (
+            <Wordmark imageClassName="h-4" />
+          ) : (
+            <Image
+              src="/chatfolio-icon.png"
+              alt=""
+              width={40}
+              height={40}
+              className="h-[30px] w-[30px] shrink-0 rounded-[9px]"
+            />
           )}
         </div>
         {open && (
