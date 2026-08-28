@@ -5,8 +5,9 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-  // Content-Security-Policy is set per-request in proxy.ts so it can
-  // include a fresh nonce for Next.js's own inline hydration scripts.
+  // No Content-Security-Policy yet — a real one needs a per-request nonce
+  // threaded through to Next's inline hydration scripts, which is a
+  // separate piece of work from the headers here, not implemented yet.
 ];
 
 const nextConfig: NextConfig = {

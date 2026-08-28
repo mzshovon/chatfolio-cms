@@ -13,15 +13,6 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# next.config.ts's rewrites() (the CORS-avoidance /api/v1/* proxy) is
-# resolved once here and baked into .next/routes-manifest.json — Next does
-# NOT re-evaluate it when the standalone server boots. So unlike PORT below,
-# BACKEND_API_URL must be supplied at *build* time, not just container run
-# time: `docker build --build-arg BACKEND_API_URL=https://api.example.com`.
-# Pointing this image at a different backend means rebuilding, not just
-# restarting with a new env var.
-ARG BACKEND_API_URL
-ENV BACKEND_API_URL=$BACKEND_API_URL
 # --webpack (set in package.json's build script): Next.js 16 defaults `next
 # build` to Turbopack, whose production build path is far more memory-hungry
 # than webpack's for this app — it OOM-killed on a 2GB host where webpack
@@ -33,7 +24,12 @@ RUN npm run build
 FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# Overridable at runtime: docker run -e PORT=8080 ...
+# Both overridable at runtime: docker run -e PORT=8080 -e BACKEND_API_URL=...
+# src/proxy.ts reads BACKEND_API_URL fresh on every request (Next.js 16's
+# `proxy` convention, evaluated at runtime, unlike the old next.config.ts
+# `rewrites()` this replaced) — no rebuild needed to point at a different
+# backend, unlike before. No default: an unset value makes every /api/v1/*
+# call fail loudly (500 with a clear message) rather than silently 404.
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
 
