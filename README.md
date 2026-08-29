@@ -26,21 +26,10 @@ Open [http://localhost:3000](http://localhost:3000) — it redirects to `/login`
 ```bash
 # .env.production (or .env.test, etc.) already has BACKEND_API_URL in it,
 # same as .env.local does for `npm run dev` — point Compose at whichever one
-# matches this build:
+# matches this deploy:
 docker compose --env-file .env.production build
 docker compose --env-file .env.production up -d
 ```
-
-In `.env.production`, `BACKEND_API_URL` is the backend's real, publicly reachable
-address — `https://api.your-domain.com` or `http://203.0.113.10:8000`, whatever it
-actually is over the open internet — never `host.docker.internal`, which only means
-anything on the machine running the container and is exclusively for the local-testing
-case below. Nothing anywhere hardcodes port `8000` — it's just what `.env.example` and
-`.env.docker.local.example` happen to show as a placeholder — so if the backend ever
-needs to move to a different port (dodging a conflict, whatever the reason),
-that's a one-line edit to `BACKEND_API_URL` in the relevant `.env.*` file and a rebuild;
-nothing in `Dockerfile`, `docker-compose.yml`, or the app itself refers to that port
-number at all.
 
 `--env-file` is Docker Compose's own flag for where it reads the values that fill in
 `${...}` inside `docker-compose.yml` — it's a separate mechanism from Next.js's own
@@ -57,40 +46,38 @@ caps. `npm run build` runs `next build --webpack`, not the Turbopack default, fo
 same reason as landing: Turbopack's production build is memory-hungry enough to OOM-kill
 on a small host where webpack builds cleanly.
 
-**One real difference from landing, worth understanding before you `docker build`**:
-`BACKEND_API_URL` must be supplied as a *build* argument
-(`docker compose build` reads it from `.env` via `docker-compose.yml`'s `build.args`),
-not just a container-runtime environment variable like `PORT` is. This isn't a style
-choice — it's forced by how Next.js works: `next.config.ts`'s `rewrites()` (the
-same-origin `/api/v1/*` → backend proxy that avoids CORS, see below) is evaluated once
-during `next build` and its result is baked into `.next/routes-manifest.json`. The
-standalone server does not re-invoke `next.config.ts` when it boots, so an env var set
-via `docker run -e` or `docker-compose.yml`'s `environment:` block arrives too late to
-affect it — I confirmed this by building without the arg and watching every `/api/v1/*`
-call 404 with an empty rewrite table, before moving `BACKEND_API_URL` to `build.args`
-fixed it. **Practical upshot: pointing this image at a different backend means
-`docker compose build` again, not just restarting the container with a new `.env`.** If
-that one-image-per-backend model stops fitting (e.g. you want a single image promoted
-across dev/staging/prod), the fix is to replace the `next.config.ts` rewrite with an
-`app/api/v1/[...path]/route.ts` handler that reads `process.env.BACKEND_API_URL`
-per-request instead — that's evaluated at runtime, not build time — but that's a real
-change to the proxy mechanism, not a Docker-only tweak, so it wasn't made speculatively.
+`BACKEND_API_URL` is a plain container-runtime environment variable, exactly like
+`PORT` — set it in `docker-compose.yml`'s `environment:` block (via `.env.production`),
+and pointing the same image at a different backend is just `docker compose up -d`
+again, no rebuild needed. In `.env.production` this should be the backend's real,
+publicly reachable address (`https://api.your-domain.com`, or `http://203.0.113.10:8000`
+if it's not behind a domain yet) — never `host.docker.internal`, which only means
+"the machine running this container" and is only useful for local testing (below).
+Nothing anywhere hardcodes a port number for it, so moving the backend to a different
+port later is a one-line edit to `BACKEND_API_URL`, no rebuild required either.
+
+This wasn't always true: `BACKEND_API_URL` used to have to be a **build**-time argument,
+because the proxy lived in `next.config.ts`'s `rewrites()`, which Next resolves once
+during `next build` and bakes into `.next/routes-manifest.json` — the standalone server
+never re-reads it at boot. That's been replaced by **`src/proxy.ts`**, using Next.js
+16's `proxy` file convention (the renamed, runtime-evaluated successor to
+`middleware.ts`) — it reads `process.env.BACKEND_API_URL` fresh on every request via
+`NextResponse.rewrite()`, so the env var only needs to be right at container *start*
+time, same as `PORT`. If `BACKEND_API_URL` is missing, every `/api/v1/*` call now fails
+loudly with a `500` and a clear message instead of silently 404ing.
 
 **Testing the image locally against the backend `npm run dev` already uses**: don't
 reuse `.env.local` for this. Its `BACKEND_API_URL=http://localhost:8000/api` is only
 correct for `npm run dev`, where "localhost" means this machine — inside a container,
 "localhost" means the container itself, so every proxied request gets `ECONNREFUSED`
-even though the backend is right there and working. Copy
-`.env.docker.local.example` → `.env.docker.local` (already gitignored, matches this
-repo's `.env*` pattern) — it points at the same backend via
-`host.docker.internal` instead, which `docker-compose.yml`'s `extra_hosts` entry makes
-resolve to "the machine running the container" on both Docker Desktop and Linux Docker
-Engine:
+even though the backend is right there and working. Use `host.docker.internal` instead,
+which resolves to "the machine running the container" on Docker Desktop automatically
+(add `extra_hosts: ["host.docker.internal:host-gateway"]` to the service in
+`docker-compose.yml` if deploying to Linux Docker Engine, where that resolution isn't
+automatic):
 
 ```bash
-cp .env.docker.local.example .env.docker.local   # then edit if your backend port differs
-docker compose --env-file .env.docker.local build
-docker compose --env-file .env.docker.local up -d
+BACKEND_API_URL=http://host.docker.internal:8000/api docker compose up -d --build
 ```
 
 ## Structure

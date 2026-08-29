@@ -172,11 +172,11 @@ export default function PublishSettingsPage() {
               {copyLabel}
             </button>
           </div>
-          <div className="mt-1.5 text-xs text-muted">{slugDraft}.chatfolio.com</div>
+          <div className="mt-1.5 text-xs text-muted">{slugDraft}.chatfolio.chat</div>
         </div>
         {settings.previous_slug && (
           <div className="text-xs text-muted">
-            Your old link ({settings.previous_slug}.chatfolio.com) will keep redirecting here.
+            Your old link ({settings.previous_slug}.chatfolio.chat) will keep redirecting here.
           </div>
         )}
 
