@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
 import * as adminApi from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
+import { CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function AdminFailedCvJobsPage() {
@@ -63,7 +64,7 @@ export default function AdminFailedCvJobsPage() {
         </div>
       ) : jobs.length === 0 ? (
         <div className="mt-10 flex flex-col items-center text-success-fg">
-          <div className="text-2xl">✓</div>
+          <CheckCircle2 className="h-7 w-7" strokeWidth={1.75} />
           <p className="mt-2.5 text-[13.5px] text-muted">No failed CV jobs right now.</p>
         </div>
       ) : (

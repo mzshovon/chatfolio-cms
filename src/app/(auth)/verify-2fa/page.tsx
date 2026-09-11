@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { IconBadge } from "@/components/ui/icon-badge";
 import { ApiError } from "@/lib/api/http";
 import { useAuthStore } from "@/store/auth-store";
+import { ArrowLeft, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -90,7 +91,9 @@ export default function VerifyTwoFactorPage() {
   return (
     <AuthCard>
       <div className="flex flex-col items-center text-center">
-        <IconBadge className="bg-accent-tint text-accent">🔒</IconBadge>
+        <IconBadge className="bg-accent-tint text-accent">
+          <Lock className="h-6 w-6" strokeWidth={1.75} />
+        </IconBadge>
         <h1 className="mt-4 font-serif text-xl font-semibold text-foreground">
           Verify it&apos;s <span className="italic text-accent">you</span>
         </h1>
@@ -144,9 +147,9 @@ export default function VerifyTwoFactorPage() {
       <button
         type="button"
         onClick={onBack}
-        className="mt-3 block w-full text-center text-[12.5px] font-medium text-muted hover:text-foreground"
+        className="mt-3 flex w-full items-center justify-center gap-1 text-[12.5px] font-medium text-muted hover:text-foreground"
       >
-        ← Back to sign in
+        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} /> Back to sign in
       </button>
     </AuthCard>
   );

@@ -7,6 +7,7 @@ import type { Role } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { cn } from "@/lib/cn";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -55,8 +56,11 @@ export default function AdminAddUserPage() {
 
   return (
     <div className="max-w-[640px] p-8">
-      <Link href="/admin/users" className="text-[12.5px] text-muted hover:text-foreground">
-        ← Back to Users
+      <Link
+        href="/admin/users"
+        className="inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-foreground"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} /> Back to Users
       </Link>
       <h1 className="mt-2.5 font-serif text-[22px] font-semibold text-foreground">
         Add a new user

@@ -42,14 +42,20 @@ const nextConfig: NextConfig = {
   async rewrites() {
     // Dev only — see the comment on `backendUrl` above. In a built run,
     // src/proxy.ts's Proxy step already produces a response for every
-    // `/api/v1/*` request before Next.js reaches this rewrite, so this
-    // never actually executes there; returning [] keeps that explicit
-    // rather than relying on that ordering alone.
+    // `/api/*` request before Next.js reaches this rewrite, so this never
+    // actually executes there; returning [] keeps that explicit rather
+    // than relying on that ordering alone.
+    //
+    // Covers the whole /api/* namespace, not just /api/v1/* — most calls
+    // are /v1 (the authenticated candidate/admin API), but the anonymous
+    // feedback endpoint lives under /api/public instead (see
+    // src/lib/api/http.ts's `prefix` option), so this strips just the
+    // leading /api rather than hardcoding /v1.
     if (process.env.NODE_ENV !== "development" || !backendUrl) return [];
     return [
       {
-        source: "/api/v1/:path*",
-        destination: `${backendUrl}/v1/:path*`,
+        source: "/api/:path*",
+        destination: `${backendUrl}/:path*`,
       },
     ];
   },

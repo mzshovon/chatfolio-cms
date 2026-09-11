@@ -11,6 +11,7 @@ import * as profileApi from "@/lib/api/profile";
 import * as sectionsApi from "@/lib/api/sections";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
+import { AlertCircle, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function PublishSettingsPage() {
@@ -233,7 +234,11 @@ export default function PublishSettingsPage() {
                   item.done ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg"
                 }`}
               >
-                {item.done ? "✓" : "!"}
+                {item.done ? (
+                  <Check className="h-3 w-3" strokeWidth={2.5} />
+                ) : (
+                  <AlertCircle className="h-3 w-3" strokeWidth={2.5} />
+                )}
               </span>
               <span className={item.done ? "text-foreground" : "text-muted"}>{item.label}</span>
             </div>

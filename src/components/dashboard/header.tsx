@@ -1,8 +1,10 @@
 "use client";
 
+import { FeedbackModal } from "@/components/dashboard/feedback-modal";
 import { NAV_ITEMS } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuthStore } from "@/store/auth-store";
+import { ChevronDown, MessageCircleHeart } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
@@ -20,6 +22,7 @@ export function Header() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const activeLabel =
     NAV_ITEMS.find((item) =>
@@ -37,6 +40,16 @@ export function Header() {
       <div className="font-serif text-[15px] font-semibold text-foreground">{activeLabel}</div>
 
       <div className="flex items-center gap-2.5">
+        {user?.role !== "admin" && (
+          <button
+            type="button"
+            onClick={() => setFeedbackOpen(true)}
+            className="flex h-9 items-center gap-1.5 rounded-[10px] border border-border bg-surface-strong px-3 text-[12.5px] font-semibold text-foreground hover:bg-surface"
+          >
+            <MessageCircleHeart className="h-4 w-4" strokeWidth={1.75} />
+            <span className="hidden sm:inline">Feedback</span>
+          </button>
+        )}
         <ThemeToggle />
 
         <div className="relative">
@@ -52,7 +65,7 @@ export function Header() {
               <div className="text-[13px] font-semibold text-foreground">{user?.email}</div>
               <div className="text-[11px] capitalize text-muted">{user?.role}</div>
             </div>
-            <span className="text-[11px] text-muted">▾</span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted" />
           </button>
 
           {menuOpen && (
@@ -97,6 +110,8 @@ export function Header() {
           )}
         </div>
       </div>
+
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </header>
   );
 }

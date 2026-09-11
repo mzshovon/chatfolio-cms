@@ -14,13 +14,18 @@ type RequestOptions = {
   query?: Record<string, string | number | boolean | undefined>;
   accessToken?: string;
   signal?: AbortSignal;
+  // Almost everything lives under /v1 (the default). The anonymous feedback
+  // endpoint lives under /v1/public instead (unauthenticated, submitted from
+  // outside the normal candidate/admin API surface), so this lets a caller
+  // override the prefix rather than every call site assuming plain /v1.
+  prefix?: string;
 };
 
 const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, query, accessToken, signal }: RequestOptions = {}
+  { method = "GET", body, query, accessToken, signal, prefix = "/v1" }: RequestOptions = {}
 ): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
@@ -39,7 +44,7 @@ export async function apiRequest<T>(
     // Same-origin path — Next.js rewrites this to the real backend
     // server-side (see next.config.ts), so the browser never makes a
     // cross-origin request and CORS never comes into play.
-    response = await fetch(`/api/v1${path}${search ? `?${search}` : ""}`, {
+    response = await fetch(`/api${prefix}${path}${search ? `?${search}` : ""}`, {
       method,
       headers,
       body: isFormData ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,

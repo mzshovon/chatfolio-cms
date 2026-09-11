@@ -10,6 +10,7 @@ import * as authApi from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/http";
 import { forgotPasswordSchema, type ForgotPasswordValues } from "@/lib/validation/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Mail } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -67,7 +68,9 @@ export default function ForgotPasswordPage() {
       <AuthCard>
         <StepDots completedSteps={2} />
         <div className="flex flex-col items-center text-center">
-          <IconBadge>✉️</IconBadge>
+          <IconBadge>
+            <Mail className="h-6 w-6" strokeWidth={1.75} />
+          </IconBadge>
           <h1 className="mt-4 font-serif text-xl font-semibold text-foreground">
             Check your inbox
           </h1>
@@ -90,9 +93,9 @@ export default function ForgotPasswordPage() {
           )}
           <Link
             href="/login"
-            className="mt-4 text-[12.5px] font-medium text-accent hover:text-accent-hover"
+            className="mt-4 inline-flex items-center gap-1 text-[12.5px] font-medium text-accent hover:text-accent-hover"
           >
-            ← Back to sign in
+            <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} /> Back to sign in
           </Link>
         </div>
       </AuthCard>

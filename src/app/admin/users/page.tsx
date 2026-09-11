@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import * as adminApi from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -138,7 +139,7 @@ export default function AdminUsersPage() {
                   href={`/admin/users/${u.id}/edit?email=${encodeURIComponent(u.email)}&role=${u.role}`}
                   className="inline-flex items-center gap-1 whitespace-nowrap rounded-[7px] border border-border bg-surface-strong px-2.5 py-1.5 text-[11.5px] font-semibold text-foreground"
                 >
-                  ✎ Edit
+                  <Pencil className="h-3 w-3" strokeWidth={2} /> Edit
                 </Link>
                 <button
                   type="button"

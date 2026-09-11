@@ -12,6 +12,7 @@ import { isoToMonth, monthToIso } from "@/lib/date";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { cn } from "@/lib/cn";
+import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const fieldClass =
@@ -508,7 +509,9 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
                 )}
                 <div className="mt-2.5 flex items-center justify-end gap-2.5">
                   {d.status === "added" ? (
-                    <StatusPill tone="success">Added ✓</StatusPill>
+                    <StatusPill tone="success" className="inline-flex items-center gap-1">
+                      Added <Check className="h-3 w-3" strokeWidth={2.5} />
+                    </StatusPill>
                   ) : (
                     <>
                       <button
@@ -617,7 +620,9 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
                 )}
                 <div className="mt-2.5 flex items-center justify-end gap-2.5">
                   {d.status === "added" ? (
-                    <StatusPill tone="success">Added ✓</StatusPill>
+                    <StatusPill tone="success" className="inline-flex items-center gap-1">
+                      Added <Check className="h-3 w-3" strokeWidth={2.5} />
+                    </StatusPill>
                   ) : (
                     <>
                       <button
@@ -671,7 +676,9 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
                 title={d.status === "error" ? d.errorMessage : undefined}
               >
                 {d.data.name}
-                {d.status === "added" && " ✓"}
+                {d.status === "added" && (
+                  <Check className="inline h-3 w-3 align-[-1px]" strokeWidth={2.5} />
+                )}
                 {d.status === "exists" && " (already have it)"}
                 {(d.status === "pending" || d.status === "error") && (
                   <button
@@ -783,7 +790,9 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
                 )}
                 <div className="mt-2.5 flex items-center justify-end gap-2.5">
                   {d.status === "added" ? (
-                    <StatusPill tone="success">Added ✓</StatusPill>
+                    <StatusPill tone="success" className="inline-flex items-center gap-1">
+                      Added <Check className="h-3 w-3" strokeWidth={2.5} />
+                    </StatusPill>
                   ) : (
                     <>
                       <button

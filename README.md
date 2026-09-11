@@ -166,6 +166,19 @@ static placeholders were closed once the backend implemented the endpoints track
   isn't built; only login-time 2FA *verification* (§2.6) is. Account settings now has a
   real surface to build it on, but enrollment itself is a separate, not-yet-requested
   feature.
+- **Feedback**: a "Feedback" button in the dashboard header (left of the theme toggle,
+  hidden for admins — `src/components/dashboard/header.tsx`) opens
+  `src/components/dashboard/feedback-modal.tsx`, a 5-star + optional-comment form that
+  posts anonymously and unauthenticated to `POST /v1/public/feedback`
+  (`src/lib/api/feedback.ts`) — note this lives under `/v1/public`, not the plain `/v1`
+  every other call uses, which is why `apiRequest` (`src/lib/api/http.ts`) grew a
+  `prefix` option (default `/v1`, overridden here). Both `next.config.ts`'s dev rewrite
+  and `src/proxy.ts` forward the whole `/api/*` namespace generically rather than
+  hardcoding `/api/v1/*`, so this needed no proxy changes of its own. Admins read
+  submissions read-only at
+  `/admin/feedback` (`GET /admin/feedback`) — score, a derived Promoter (4-5) /
+  Detractor (0-3) sentiment badge, the message (click to expand the full text), and
+  submission time.
 
 ## Candidate onboarding (first-run tutorial + progress tracker)
 

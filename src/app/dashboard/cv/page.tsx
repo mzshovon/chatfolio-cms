@@ -8,6 +8,7 @@ import * as cvApi from "@/lib/api/cv";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { setCvUploadedFlag } from "@/lib/onboarding";
+import { FileText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
@@ -115,7 +116,7 @@ export default function CvUploadPage() {
           className="hidden"
           onChange={onFileSelected}
         />
-        <div className="text-[26px]">📄</div>
+        <FileText className="mx-auto h-7 w-7 text-muted" strokeWidth={1.5} />
         <div className="mt-2.5 text-[13.5px] font-semibold text-foreground">
           Click to upload your CV
         </div>
@@ -127,8 +128,8 @@ export default function CvUploadPage() {
       {fileMeta && (
         <Card className="mt-5 flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-background text-lg">
-              📄
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-background">
+              <FileText className="h-5 w-5 text-muted" strokeWidth={1.5} />
             </div>
             <div>
               <div className="text-[13.5px] font-semibold text-foreground">{fileMeta.name}</div>

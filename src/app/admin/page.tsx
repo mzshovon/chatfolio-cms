@@ -8,6 +8,7 @@ import * as adminApi from "@/lib/api/admin";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useAuthStore } from "@/store/auth-store";
+import { Briefcase, Eye, LayoutGrid, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -78,18 +79,18 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const statCards = [
+  const statCards: { label: string; value: string; delta: string; icon: LucideIcon }[] = [
     {
       label: "Total visitors",
       value: metrics?.total_portfolio_visitors != null ? formatCompact(metrics.total_portfolio_visitors) : "—",
       delta: "across all published chatfolios",
-      icon: "👁",
+      icon: Eye,
     },
     {
       label: "Recruiters engaged",
       value: metrics?.recruiters_engaged != null ? String(metrics.recruiters_engaged) : "—",
       delta: "unique recruiters this month",
-      icon: "🧑‍💼",
+      icon: Briefcase,
     },
     {
       label: "AI tokens used",
@@ -98,13 +99,13 @@ export default function AdminDashboardPage() {
         metrics?.ai_tokens_monthly_quota != null
           ? `of ${formatCompact(metrics.ai_tokens_monthly_quota)} monthly quota`
           : "",
-      icon: "⚡",
+      icon: Zap,
     },
     {
       label: "Published chatfolios",
       value: metrics ? String(metrics.published_chatfolios) : "—",
       delta: metrics ? `of ${metrics.total_candidates} candidates` : "",
-      icon: "◱",
+      icon: LayoutGrid,
     },
   ];
 
@@ -124,7 +125,7 @@ export default function AdminDashboardPage() {
           <Card key={stat.label}>
             <div className="flex items-center justify-between">
               <span className="text-[12.5px] text-muted">{stat.label}</span>
-              <span className="text-base">{stat.icon}</span>
+              <stat.icon className="h-4 w-4 text-muted" strokeWidth={1.75} />
             </div>
             <div className="mt-2.5 font-serif text-[28px] font-semibold text-foreground">
               {stat.value}

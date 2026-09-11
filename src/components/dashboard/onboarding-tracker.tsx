@@ -9,6 +9,7 @@ import {
   getTrackerOpenPreference,
   setTrackerOpenPreference,
 } from "@/lib/onboarding";
+import { Check, Rocket, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -115,9 +116,9 @@ export function OnboardingTracker() {
       <button
         type="button"
         onClick={() => toggle(true)}
-        className="fixed bottom-6 right-6 z-40 rounded-full bg-accent px-4.5 py-3 text-[12.5px] font-semibold text-accent-foreground shadow-lg hover:bg-accent-hover"
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-1.5 rounded-full bg-accent px-4.5 py-3 text-[12.5px] font-semibold text-accent-foreground shadow-lg hover:bg-accent-hover"
       >
-        🚀 {progressLabel}
+        <Rocket className="h-3.5 w-3.5" strokeWidth={2} /> {progressLabel}
       </button>
     );
   }
@@ -129,9 +130,10 @@ export function OnboardingTracker() {
         <button
           type="button"
           onClick={() => toggle(false)}
-          className="text-[13px] text-muted hover:text-foreground"
+          className="text-muted hover:text-foreground"
+          aria-label="Collapse"
         >
-          ✕
+          <X className="h-3.5 w-3.5" strokeWidth={2} />
         </button>
       </div>
       <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-border">
@@ -151,7 +153,7 @@ export function OnboardingTracker() {
                 s.done ? "bg-success-bg text-success-fg" : "border border-border text-muted"
               )}
             >
-              {s.done ? "✓" : ""}
+              {s.done && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
             </span>
             <span className="flex-1">{s.label}</span>
             {!s.done && <span className="text-[11px] text-muted">{s.action}</span>}

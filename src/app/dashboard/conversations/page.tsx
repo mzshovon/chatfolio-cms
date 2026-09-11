@@ -7,6 +7,7 @@ import * as dashboardApi from "@/lib/api/dashboard";
 import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { cn } from "@/lib/cn";
+import { CheckCircle2, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function ConversationsPage() {
@@ -182,7 +183,9 @@ export default function ConversationsPage() {
               <div className="flex items-center gap-2.5">
                 {selected.is_flagged && <StatusPill tone="danger">Flagged</StatusPill>}
                 {selected.reviewed_by_candidate ? (
-                  <span className="text-xs text-success-fg">✓ Reviewed</span>
+                  <span className="flex items-center gap-1 text-xs text-success-fg">
+                    <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.75} /> Reviewed
+                  </span>
                 ) : (
                   <button
                     type="button"
@@ -220,7 +223,7 @@ export default function ConversationsPage() {
 
         {!detailLoading && !selected && (
           <div className="flex flex-1 flex-col items-center justify-center text-muted">
-            <div className="text-[28px]">💬</div>
+            <MessageSquare className="h-7 w-7" strokeWidth={1.5} />
             <div className="mt-2.5 text-[13.5px]">Select a conversation to read it</div>
           </div>
         )}

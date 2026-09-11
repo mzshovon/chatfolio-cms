@@ -3,6 +3,7 @@
 import { ADMIN_NAV_ITEMS } from "@/components/admin/nav-items";
 import { Wordmark } from "@/components/ui/wordmark";
 import { cn } from "@/lib/cn";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,9 +42,9 @@ export function AdminSidebar({ open, onToggle }: SidebarProps) {
             type="button"
             onClick={onToggle}
             title="Collapse sidebar"
-            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-lg font-semibold text-brand-muted hover:bg-sidebar-hover hover:text-brand-fg"
+            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-brand-muted hover:bg-sidebar-hover hover:text-brand-fg"
           >
-            ‹
+            <ChevronLeft className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -53,9 +54,9 @@ export function AdminSidebar({ open, onToggle }: SidebarProps) {
           type="button"
           onClick={onToggle}
           title="Expand sidebar"
-          className="mt-2.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center self-center rounded-lg text-lg font-semibold text-brand-muted hover:bg-sidebar-hover hover:text-brand-fg"
+          className="mt-2.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center self-center rounded-lg text-brand-muted hover:bg-sidebar-hover hover:text-brand-fg"
         >
-          ›
+          <ChevronRight className="h-4 w-4" />
         </button>
       )}
 
@@ -74,7 +75,7 @@ export function AdminSidebar({ open, onToggle }: SidebarProps) {
                 active ? "bg-sidebar-active text-brand-fg" : "text-brand-muted hover:bg-sidebar-hover"
               )}
             >
-              <span className="w-5 shrink-0 text-center text-base">{item.icon}</span>
+              <item.icon className="h-[18px] w-5 shrink-0" strokeWidth={1.75} />
               {open && <span className="overflow-hidden whitespace-nowrap">{item.label}</span>}
             </Link>
           );

@@ -10,6 +10,7 @@ import * as authApi from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/http";
 import { resetPasswordSchema, type ResetPasswordValues } from "@/lib/validation/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -56,7 +57,9 @@ export function ResetPasswordView() {
       <AuthCard>
         <StepDots completedSteps={2} />
         <div className="flex flex-col items-center text-center">
-          <IconBadge>✓</IconBadge>
+          <IconBadge>
+            <CheckCircle2 className="h-6 w-6" strokeWidth={1.75} />
+          </IconBadge>
           <h1 className="mt-4 font-serif text-xl font-semibold text-foreground">
             Password updated
           </h1>

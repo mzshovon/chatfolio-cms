@@ -156,3 +156,17 @@ export function updatePermission(accessToken: string, id: string, input: Partial
 export function deletePermission(accessToken: string, id: string) {
   return apiRequest<void>(`/admin/permissions/${id}`, { method: "DELETE", accessToken });
 }
+
+export type AdminFeedback = {
+  id: string;
+  nps_score: number; // 0-5
+  message: string | null;
+  created_at: string;
+};
+
+// Read-only — feedback is submitted anonymously via the public
+// /public/feedback endpoint (src/lib/api/feedback.ts); there's no
+// create/update/delete here.
+export function listFeedback(accessToken: string, limit = 20, offset = 0) {
+  return apiRequest<AdminFeedback[]>("/admin/feedback", { accessToken, query: { limit, offset } });
+}

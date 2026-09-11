@@ -3,6 +3,7 @@
 import { ADMIN_NAV_ITEMS } from "@/components/admin/nav-items";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuthStore } from "@/store/auth-store";
+import { ChevronDown } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
@@ -52,7 +53,7 @@ export function AdminHeader() {
               <div className="text-[13px] font-semibold text-foreground">{user?.email}</div>
               <div className="text-[11px] capitalize text-muted">{user?.role}</div>
             </div>
-            <span className="text-[11px] text-muted">▾</span>
+            <ChevronDown className="h-3.5 w-3.5 text-muted" />
           </button>
 
           {menuOpen && (

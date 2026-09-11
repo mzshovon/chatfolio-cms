@@ -11,6 +11,7 @@ import * as sectionsApi from "@/lib/api/sections";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/auth-store";
+import { AlertCircle, Check, Eye, MessageSquare, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -72,21 +73,26 @@ export default function DashboardHomePage() {
     { label: "Summary section approved", done: summary?.status === "approved" },
   ];
 
-  const statCards = [
+  const statCards: { label: string; value: string; delta: string; icon: LucideIcon }[] = [
     {
       label: "Portfolio visitors",
       value: analytics ? formatCompact(analytics.portfolio_visitors_total) : "—",
       delta: analytics
         ? `${analytics.portfolio_visitors_delta_pct >= 0 ? "+" : ""}${analytics.portfolio_visitors_delta_pct}% this week`
         : "",
-      icon: "👁",
+      icon: Eye,
     },
-    { label: "Recruiter chats", value: String(conversations.length), delta: "recent conversations", icon: "💬" },
+    {
+      label: "Recruiter chats",
+      value: String(conversations.length),
+      delta: "recent conversations",
+      icon: MessageSquare,
+    },
     {
       label: "AI tokens used",
       value: analytics ? formatCompact(analytics.ai_tokens_used) : "—",
       delta: analytics ? `of ${formatCompact(analytics.ai_tokens_monthly_quota)} monthly quota` : "",
-      icon: "⚡",
+      icon: Zap,
     },
   ];
 
@@ -114,7 +120,7 @@ export default function DashboardHomePage() {
           <Card key={stat.label}>
             <div className="flex items-center justify-between">
               <span className="text-[12.5px] text-muted">{stat.label}</span>
-              <span className="text-base">{stat.icon}</span>
+              <stat.icon className="h-4 w-4 text-muted" strokeWidth={1.75} />
             </div>
             <div className="mt-2.5 font-serif text-[28px] font-semibold text-foreground">
               {stat.value}
@@ -182,7 +188,11 @@ export default function DashboardHomePage() {
                     item.done ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg"
                   )}
                 >
-                  {item.done ? "✓" : "!"}
+                  {item.done ? (
+                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                  ) : (
+                    <AlertCircle className="h-3 w-3" strokeWidth={2.5} />
+                  )}
                 </span>
                 <span className={item.done ? "text-foreground" : "text-muted"}>{item.label}</span>
               </div>

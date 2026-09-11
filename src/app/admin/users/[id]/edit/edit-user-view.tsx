@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { cn } from "@/lib/cn";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -88,8 +89,11 @@ export function EditUserView() {
 
   return (
     <div className="max-w-[640px] p-8">
-      <Link href="/admin/users" className="text-[12.5px] text-muted hover:text-foreground">
-        ← Back to Users
+      <Link
+        href="/admin/users"
+        className="inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-foreground"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} /> Back to Users
       </Link>
       <div className="mt-2.5 flex items-center gap-3.5">
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-tint text-base font-semibold text-accent">
