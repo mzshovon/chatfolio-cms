@@ -12,9 +12,22 @@ import { NextResponse, type NextRequest } from "next/server";
 // `middleware`) runs this function fresh on every request instead, so
 // BACKEND_API_URL now behaves like PORT: a plain container-runtime env var,
 // no rebuild needed to change it.
+//
+// Deliberately staging/production only: `next dev` sets NODE_ENV to
+// "development" automatically, and any built run (staging or prod, via
+// `next start` or this repo's standalone Docker image) is "production" —
+// no separate flag needed. In dev, this bails out immediately and
+// next.config.ts's own `rewrites()` handles `/api/v1/*` directly instead,
+// since going through this extra network hop on every request added
+// noticeable latency locally for no benefit dev doesn't already have
+// (dev's `.env.local` + next.config.ts are already read fresh on every
+// `next dev` restart, so there's no build-time-baking problem to solve
+// there in the first place).
 const API_PREFIX = "/api/v1";
 
 export function proxy(request: NextRequest) {
+  if (process.env.NODE_ENV !== "production") return;
+
   const backendUrl = process.env.BACKEND_API_URL?.replace(/\/+$/, "");
 
   if (!backendUrl) {
