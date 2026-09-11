@@ -11,7 +11,7 @@ export type SubmitFeedbackInput = {
 export function submitFeedback(input: SubmitFeedbackInput) {
   return apiRequest<void>("/feedback", {
     method: "POST",
-    prefix: "//v1/public",
+    prefix: "/v1/public",
     body: input,
   });
 }
