@@ -7,6 +7,7 @@ import { SavedFlash } from "@/components/ui/saved-flash";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/http";
 import * as profileApi from "@/lib/api/profile";
+import { JOB_TYPE_OPTIONS } from "@/lib/api/profile";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { cn } from "@/lib/cn";
@@ -115,6 +116,7 @@ export default function ProfileBuilderPage() {
           location: profile.location,
           contact_email: profile.contact_email,
           phone: profile.phone,
+          job_type: profile.job_type,
           social_links: profile.social_links,
         })
       );
@@ -425,6 +427,30 @@ export default function ProfileBuilderPage() {
                 className={fieldClass}
               />
             </div>
+            <div className="mt-3.5">
+              <div className="mb-1.5 text-xs text-muted">Preferred work type</div>
+              <div className="flex flex-wrap gap-2">
+                {JOB_TYPE_OPTIONS.map((opt) => {
+                  const selected = profile.job_type === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setProfileField({ job_type: selected ? null : opt.value })}
+                      className={cn(
+                        "rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold",
+                        selected
+                          ? "border-accent bg-accent-tint text-accent"
+                          : "border-border bg-surface-strong text-muted"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="mt-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <input
                 placeholder="GitHub URL"

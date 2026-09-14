@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import * as cvApi from "@/lib/api/cv";
 import { ApiError } from "@/lib/api/http";
 import * as profileApi from "@/lib/api/profile";
+import { JOB_TYPE_OPTIONS } from "@/lib/api/profile";
 import { isoToMonth, monthToIso } from "@/lib/date";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
@@ -70,6 +71,11 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
   const [socialPairs, setSocialPairs] = useState<{ key: string; value: string; apply: boolean }[]>(
     []
   );
+  // Not something a CV can state explicitly, so there's no parsed value to
+  // review here — this just gives candidates a place to set it while
+  // they're already filling in the rest of their profile post-upload.
+  const [jobType, setJobType] = useState<profileApi.JobType | null>(null);
+  const [applyJobType, setApplyJobType] = useState(false);
   const [existingProfile, setExistingProfile] = useState<profileApi.Profile | null>(null);
   const [basicSaving, setBasicSaving] = useState(false);
   const [basicError, setBasicError] = useState<string | null>(null);
@@ -103,6 +109,8 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
           contact_email: !profile.contact_email,
           phone: !profile.phone,
         });
+        setJobType(profile.job_type);
+        setApplyJobType(!profile.job_type);
         // Normalize parsed platform names ("Linkedin") to the lowercase keys
         // the rest of the app uses ("linkedin"), so applying doesn't create
         // a second, differently-cased entry alongside an existing one.
@@ -153,6 +161,7 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
     for (const field of BASIC_FIELDS) {
       if (basicApply[field.key]) patch[field.key] = basic[field.key] || null;
     }
+    if (applyJobType) patch.job_type = jobType;
     const selectedSocial = socialPairs.filter((p) => p.apply);
     if (selectedSocial.length > 0) {
       patch.social_links = {
@@ -345,6 +354,38 @@ export function CvParsedReview({ parsed }: { parsed: cvApi.ParsedProfile }) {
               </div>
             </label>
           ))}
+
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={applyJobType}
+              onChange={(e) => setApplyJobType(e.target.checked)}
+              className="mt-3 shrink-0 accent-accent"
+            />
+            <div className="flex-1">
+              <div className="mb-1 text-[11.5px] text-muted">Preferred work type</div>
+              <div className="flex flex-wrap gap-2">
+                {JOB_TYPE_OPTIONS.map((opt) => {
+                  const selected = jobType === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setJobType(selected ? null : opt.value)}
+                      className={cn(
+                        "rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold",
+                        selected
+                          ? "border-accent bg-accent-tint text-accent"
+                          : "border-border bg-surface text-muted"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </label>
 
           {socialPairs.map((pair, i) => (
             <label key={pair.key} className="flex items-start gap-3">

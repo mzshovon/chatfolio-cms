@@ -11,8 +11,25 @@ import * as profileApi from "@/lib/api/profile";
 import * as sectionsApi from "@/lib/api/sections";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
+import { cn } from "@/lib/cn";
 import { AlertCircle, Check } from "lucide-react";
 import { useEffect, useState } from "react";
+
+// Matches the backend's slug validation exactly (Docs §6): lowercase
+// letters, digits, and hyphens only, 3-63 chars, can't start or end with a
+// hyphen. Checking this client-side means the friendly message below is
+// what candidates actually see — the backend's own 422 for the same rule
+// is a raw regex in its `msg` field, not something to show as-is.
+const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/;
+
+function slugValidationError(slug: string): string | null {
+  if (!slug) return "Enter a URL slug.";
+  if (slug.length < 3) return "Slug must be at least 3 characters.";
+  if (!SLUG_PATTERN.test(slug)) {
+    return "Slug can only contain lowercase letters, numbers, and hyphens — no spaces, underscores, or other symbols, and it can't start or end with a hyphen.";
+  }
+  return null;
+}
 
 export default function PublishSettingsPage() {
   const authed = useAuthedRequest();
@@ -29,6 +46,7 @@ export default function PublishSettingsPage() {
   const [cvDownloadable, setCvDownloadable] = useState(true);
 
   const [copyLabel, setCopyLabel] = useState("Copy link");
+  const [slugError, setSlugError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -66,6 +84,12 @@ export default function PublishSettingsPage() {
   }, []);
 
   const onSaveSettings = async () => {
+    const validationError = slugValidationError(slugDraft);
+    if (validationError) {
+      setSlugError(validationError);
+      return;
+    }
+    setSlugError(null);
     setSaving(true);
     setError(null);
     try {
@@ -80,7 +104,23 @@ export default function PublishSettingsPage() {
       setSlugDraft(updated.slug);
       savedFlash.flash("settings");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't save your changes.");
+      if (err instanceof ApiError) {
+        // Defensive fallback in case the backend ever rejects a slug our
+        // own slugValidationError missed (e.g. a rule it enforces that this
+        // client-side copy doesn't yet) — swap its raw "slug: String should
+        // match pattern '...'" for the same friendly copy shown above,
+        // rather than exposing the regex.
+        if (err.status === 422 && /^slug:/.test(err.message)) {
+          setError(null);
+          setSlugError(
+            "Slug can only contain lowercase letters, numbers, and hyphens — no spaces, underscores, or other symbols, and it can't start or end with a hyphen."
+          );
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Couldn't save your changes.");
+      }
     } finally {
       setSaving(false);
     }
@@ -162,8 +202,11 @@ export default function PublishSettingsPage() {
           <div className="flex gap-2.5">
             <input
               value={slugDraft}
-              onChange={(e) => setSlugDraft(e.target.value.toLowerCase())}
-              className={fieldClass}
+              onChange={(e) => {
+                setSlugDraft(e.target.value.toLowerCase());
+                setSlugError(null);
+              }}
+              className={cn(fieldClass, slugError && "border-danger-fg/50")}
             />
             <button
               type="button"
@@ -173,7 +216,11 @@ export default function PublishSettingsPage() {
               {copyLabel}
             </button>
           </div>
-          <div className="mt-1.5 text-xs text-muted">{slugDraft}.chatfolio.chat</div>
+          {slugError ? (
+            <div className="mt-1.5 text-xs text-danger-fg">{slugError}</div>
+          ) : (
+            <div className="mt-1.5 text-xs text-muted">{slugDraft}.chatfolio.chat</div>
+          )}
         </div>
         {settings.previous_slug && (
           <div className="text-xs text-muted">

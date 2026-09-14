@@ -2,6 +2,16 @@ import { apiRequest } from "@/lib/api/http";
 
 export type ProfileStatus = "draft" | "approved";
 
+// Also grounds the recruiter chat's "are you open to remote roles?" answers
+// and is searchable via GET /public/chatfolio/search (Required_API_Doc.md §7).
+export type JobType = "remote" | "onsite" | "hybrid";
+
+export const JOB_TYPE_OPTIONS: { value: JobType; label: string }[] = [
+  { value: "remote", label: "Remote" },
+  { value: "onsite", label: "Onsite" },
+  { value: "hybrid", label: "Hybrid" },
+];
+
 export type Profile = {
   id: string;
   full_name: string | null;
@@ -11,11 +21,12 @@ export type Profile = {
   contact_email: string | null;
   phone: string | null;
   social_links: Record<string, string>;
+  job_type: JobType | null;
   status: ProfileStatus;
 };
 
 export type ProfilePatch = Partial<
-  Pick<Profile, "full_name" | "title" | "bio" | "location" | "contact_email" | "phone"> & {
+  Pick<Profile, "full_name" | "title" | "bio" | "location" | "contact_email" | "phone" | "job_type"> & {
     social_links: Record<string, string>;
   }
 >;

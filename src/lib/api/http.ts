@@ -23,6 +23,28 @@ type RequestOptions = {
 
 const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
+// FastAPI/Pydantic validation errors (422) shape `detail` as an ARRAY of
+// { type, loc, msg, ... } objects, not a string like every other error in
+// this API. The naive `String(detail)` on an array of objects produces the
+// literal text "[object Object]" — this extracts each item's `msg`
+// (prefixed with its field name, from the last segment of `loc`, when that
+// adds information) and joins them, so validation errors read like
+// "slug: String should match pattern '...'" instead.
+function formatErrorDetail(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
+  if (!Array.isArray(detail) || detail.length === 0) return null;
+
+  const messages = detail.map((item) => {
+    if (!item || typeof item !== "object") return String(item);
+    const { loc, msg } = item as { loc?: unknown[]; msg?: unknown };
+    const field = Array.isArray(loc) ? loc[loc.length - 1] : null;
+    const text = typeof msg === "string" ? msg : JSON.stringify(item);
+    return typeof field === "string" ? `${field}: ${text}` : text;
+  });
+
+  return messages.join("; ");
+}
+
 export async function apiRequest<T>(
   path: string,
   { method = "GET", body, query, accessToken, signal, prefix = "/v1" }: RequestOptions = {}
@@ -61,10 +83,8 @@ export async function apiRequest<T>(
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message =
-      (data && typeof data === "object" && "detail" in data
-        ? String((data as { detail: unknown }).detail)
-        : null) ?? GENERIC_ERROR_MESSAGE;
+    const detail = data && typeof data === "object" && "detail" in data ? (data as { detail: unknown }).detail : null;
+    const message = formatErrorDetail(detail) ?? GENERIC_ERROR_MESSAGE;
     throw new ApiError(response.status, message);
   }
 
