@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert } from "@/components/ui/alert";
+import { GoogleCalendarCard } from "@/components/dashboard/google-calendar-card";
 import { Card } from "@/components/ui/card";
 import { SavedFlash } from "@/components/ui/saved-flash";
 import * as settingsApi from "@/lib/api/settings";
@@ -160,6 +161,8 @@ export default function AccountSettingsPage() {
           </button>
         </div>
       </Card>
+
+      <GoogleCalendarCard />
     </div>
   );
 }
