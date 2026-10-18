@@ -1,7 +1,6 @@
 "use client";
 
 import { Alert } from "@/components/ui/alert";
-import { GoogleCalendarCard } from "@/components/dashboard/google-calendar-card";
 import { Card } from "@/components/ui/card";
 import { SavedFlash } from "@/components/ui/saved-flash";
 import * as settingsApi from "@/lib/api/settings";
@@ -9,7 +8,8 @@ import { ApiError } from "@/lib/api/http";
 import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { useAuthStore } from "@/store/auth-store";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const fieldClass =
   "w-full rounded-[9px] border border-border bg-surface-strong px-3.5 py-3 text-[13.5px] text-foreground outline-none focus:border-accent";
@@ -19,6 +19,14 @@ export default function AccountSettingsPage() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const savedFlash = useSaveFlash();
+  const router = useRouter();
+
+  // Google's OAuth callback is fixed to land here with ?meeting_settings=...;
+  // the calendar now lives on Configuration, so hand the result over.
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("meeting_settings");
+    if (result) router.replace(`/dashboard/configuration?meeting_settings=${encodeURIComponent(result)}`);
+  }, [router]);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -162,7 +170,6 @@ export default function AccountSettingsPage() {
         </div>
       </Card>
 
-      <GoogleCalendarCard />
     </div>
   );
 }

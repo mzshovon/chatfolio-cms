@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import * as authApi from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/http";
+import { useBillingStore } from "@/store/billing-store";
+import { useEntitlementsStore } from "@/store/entitlements-store";
 import { getStoredRefreshToken, setStoredRefreshToken } from "@/lib/storage/refresh-token";
 
 type AuthState = {
@@ -120,6 +122,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     const { refreshToken } = get();
     setStoredRefreshToken(null);
+    useEntitlementsStore.getState().reset();
+    useBillingStore.getState().reset();
     set({ user: null, accessToken: null, refreshToken: null, pendingChallenge: null });
     if (refreshToken) {
       await authApi.logout(refreshToken).catch(() => {});

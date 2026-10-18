@@ -1,4 +1,14 @@
-import { FileText, LayoutDashboard, MessageSquare, PenLine, Rocket, User, type LucideIcon } from "lucide-react";
+import {
+  FileText,
+  LayoutDashboard,
+  MessageSquare,
+  PenLine,
+  Rocket,
+  SlidersHorizontal,
+  Sparkles,
+  User,
+  type LucideIcon,
+} from "lucide-react";
 
 export type NavItem = {
   id: string;
@@ -14,4 +24,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "sections", icon: PenLine, label: "Portfolio Sections", href: "/dashboard/sections" },
   { id: "publish", icon: Rocket, label: "Publish Settings", href: "/dashboard/publish" },
   { id: "conversations", icon: MessageSquare, label: "Conversations", href: "/dashboard/conversations" },
+  { id: "configuration", icon: SlidersHorizontal, label: "Configuration", href: "/dashboard/configuration" },
+  { id: "plan", icon: Sparkles, label: "Plan & License", href: "/dashboard/plan" },
 ];

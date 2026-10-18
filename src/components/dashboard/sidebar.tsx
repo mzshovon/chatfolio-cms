@@ -3,6 +3,9 @@
 import { NAV_ITEMS } from "@/components/dashboard/nav-items";
 import { Wordmark } from "@/components/ui/wordmark";
 import { cn } from "@/lib/cn";
+import { FEATURE } from "@/lib/api/billing";
+import { formatDate } from "@/lib/date";
+import { usePlanAccess } from "@/store/entitlements-store";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,6 +18,8 @@ type SidebarProps = {
 
 export function Sidebar({ open, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const plan = usePlanAccess();
+  const chats = plan.feature(FEATURE.recruiterChatsLimit);
 
   return (
     <aside
@@ -81,6 +86,42 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
           );
         })}
       </nav>
+
+      {open && plan.ready && (
+        <div className="mb-3 rounded-xl border border-brand-border bg-sidebar-hover p-3.5">
+          {plan.isFree ? (
+            <>
+              <div className="text-xs font-bold tracking-[0.12em] text-brand-muted">
+                {plan.planName.toUpperCase()} PLAN
+              </div>
+              {chats && !chats.unlimited && (
+                <div className="mt-1.5 text-[12.5px] leading-snug text-brand-fg/80">
+                  {chats.used ?? 0} of {chats.int_value} recruiter chats used
+                  {chats.period ? ` this ${chats.period === "monthly" ? "month" : "period"}` : ""}
+                </div>
+              )}
+              <Link
+                href="/dashboard/plan"
+                className="mt-2.5 block w-full rounded-lg bg-accent px-2 py-2 text-center text-[13px] font-semibold text-accent-foreground hover:bg-accent-hover"
+              >
+                Upgrade plan
+              </Link>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-success-fg" />
+                <span className="text-xs font-bold tracking-[0.12em] text-brand-accent">
+                  {plan.planName.toUpperCase()}
+                </span>
+              </div>
+              <div className="mt-1.5 text-[12.5px] leading-snug text-brand-fg/80">
+                {plan.expiresAt ? `Active · expires ${formatDate(plan.expiresAt)}` : "Active"}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div
         className={cn(

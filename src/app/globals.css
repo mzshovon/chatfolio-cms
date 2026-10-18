@@ -165,3 +165,24 @@ body {
     animation: none;
   }
 }
+
+/* CV scan: a bar sweeping down the mock document while the backend parses. */
+@keyframes cv-scan {
+  0% {
+    top: -12%;
+  }
+  100% {
+    top: 96%;
+  }
+}
+
+.animate-cv-scan {
+  animation: cv-scan 1.8s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cv-scan {
+    animation: none;
+    top: 40%;
+  }
+}

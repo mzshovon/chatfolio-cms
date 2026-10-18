@@ -1,15 +1,25 @@
 export class ApiError extends Error {
   status: number;
+  // Machine-readable code on plan-enforcement errors (403): "FEATURE_NOT_IN_PLAN"
+  // or "LIMIT_REACHED". Lets the UI offer an upgrade instead of a raw message.
+  code: string | null;
+  feature: string | null;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code: string | null = null, feature: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
+    this.feature = feature;
+  }
+
+  get isPlanLimit() {
+    return this.code === "FEATURE_NOT_IN_PLAN" || this.code === "LIMIT_REACHED";
   }
 }
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
   accessToken?: string;
@@ -85,7 +95,13 @@ export async function apiRequest<T>(
   if (!response.ok) {
     const detail = data && typeof data === "object" && "detail" in data ? (data as { detail: unknown }).detail : null;
     const message = formatErrorDetail(detail) ?? GENERIC_ERROR_MESSAGE;
-    throw new ApiError(response.status, message);
+    const extra = data && typeof data === "object" ? (data as { code?: unknown; feature?: unknown }) : {};
+    throw new ApiError(
+      response.status,
+      message,
+      typeof extra.code === "string" ? extra.code : null,
+      typeof extra.feature === "string" ? extra.feature : null
+    );
   }
 
   return data as T;

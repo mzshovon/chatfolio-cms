@@ -26,3 +26,9 @@ export function formatDateTime(iso: string) {
   const hours12 = hours24 % 12 || 12;
   return `${day}/${month}/${year}, ${hours12}:${minutes} ${period}`;
 }
+
+// "Oct 18, 2026" — fixed en-US layout so plan/billing dates read the same
+// everywhere, in the viewer's local time zone.
+export function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}

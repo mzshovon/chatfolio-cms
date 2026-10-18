@@ -3,10 +3,13 @@
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PreviewBanner } from "@/components/ui/preview-banner";
+import { PlanLock } from "@/components/ui/plan-lock";
 import { SavedFlash } from "@/components/ui/saved-flash";
 import { StatusPill } from "@/components/ui/status-pill";
+import { FEATURE } from "@/lib/api/billing";
 import { ApiError } from "@/lib/api/http";
+import { cn } from "@/lib/cn";
+import { usePlanAccess } from "@/store/entitlements-store";
 import * as meetingApi from "@/lib/api/meeting-settings";
 import {
   DAYS,
@@ -43,6 +46,7 @@ function presetFor(days: Day[], start: string, end: string): Availability {
 
 export function GoogleCalendarCard() {
   const authed = useAuthedRequest();
+  const plan = usePlanAccess();
   const savedFlash = useSaveFlash();
 
   const [settings, setSettings] = useState<meetingApi.MeetingSettings | null>(null);
@@ -152,153 +156,167 @@ export function GoogleCalendarCard() {
     savedFlash.flash("availability");
   };
 
+  const meetings = plan.feature(FEATURE.meetingsLimit);
+  const locked = plan.ready && !plan.can(FEATURE.calendarBooking);
+
   return (
     <>
-      <Card>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <span className="font-serif text-[15px] font-semibold text-foreground">Google Calendar</span>
-            <p className="mt-1 text-[12.5px] text-muted">
-              Link your calendar so recruiters can book meetings that fit your availability.
-            </p>
-          </div>
-          {!loading && (
-            <StatusPill tone={connected ? "success" : "neutral"}>{connected ? "Enabled" : "Disabled"}</StatusPill>
-          )}
-        </div>
-
-        {notice && (
-          <Alert variant={notice.variant} className="mt-3">
-            {notice.text}
-          </Alert>
-        )}
-        {error && <Alert className="mt-3">{error}</Alert>}
-        {needsReconnect && (
-          <Alert className="mt-3">Your Google session expired. Reconnect Google Calendar to continue.</Alert>
-        )}
-
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="text-[13px] text-muted">
-            {loading
-              ? "Checking connection…"
-              : connected
-                ? `Connected as ${settings?.google_account_email ?? "your Google account"}`
-                : "Not connected"}
-          </span>
-          {connected ? (
-            <button
-              type="button"
-              onClick={() => setConfirmDisable(true)}
-              disabled={busy}
-              className="rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground disabled:opacity-60"
-            >
-              Disable
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={enable}
-              disabled={busy || loading}
-              className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground disabled:opacity-60"
-            >
-              {busy ? "Redirecting…" : needsReconnect ? "Reconnect Google Calendar" : "Enable Google Calendar"}
-            </button>
-          )}
-        </div>
-      </Card>
-
-      <Card>
-        <span className="font-serif text-[15px] font-semibold text-foreground">Meeting availability</span>
-        <p className="mt-1 text-[12.5px] text-muted">Pick the days and hours you&apos;re open to meetings.</p>
-
-        <div className="mt-3">
-          <PreviewBanner>
-            Availability is saved in this browser only for now — the backend has no endpoint for it yet.
-          </PreviewBanner>
-        </div>
-
-        {availability && (
-          <>
-            <div className="mt-3.5 flex flex-wrap gap-2">
-              {PRESETS.map((preset) => (
+      <PlanLock
+        locked={locked}
+        title="Calendar booking isn't in your plan"
+        description="Recruiters book Google Meet with you in one click."
+        className="rounded-2xl"
+      >
+        <Card className="bg-surface-strong p-5 sm:p-[22px]">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] bg-[#e8f0fe] font-bold text-[#1a73e8]">
+              M
+            </div>
+            <div className="min-w-[200px] flex-1">
+              <div className="text-[15px] font-semibold text-foreground">Google Meet booking</div>
+              <div className="text-[12.5px] text-muted">Let recruiters book a call straight from your chatfolio.</div>
+            </div>
+            {!loading &&
+              (connected ? (
+                <StatusPill tone="success" className="text-xs">
+                  Connected · {settings?.google_account_email ?? "Google account"}
+                </StatusPill>
+              ) : (
                 <button
-                  key={preset.label}
                   type="button"
-                  onClick={() => setAvailability(preset.build())}
-                  className="rounded-full border border-border px-3 py-1 text-[11.5px] font-semibold text-muted hover:text-foreground"
+                  onClick={enable}
+                  disabled={busy}
+                  className="rounded-lg border border-border bg-surface-strong px-3.5 py-2 text-[13px] font-semibold text-foreground disabled:opacity-60"
                 >
-                  {preset.label}
+                  {busy ? "Redirecting…" : needsReconnect ? "Reconnect Google account" : "Connect Google account"}
                 </button>
               ))}
-            </div>
+          </div>
 
-            <div className="mt-3.5 flex flex-col gap-2">
-              {DAYS.map((day) => {
-                const slot = availability[day];
-                const invalid = !isValidSlot(slot);
-                return (
-                  <div key={day} className="flex flex-wrap items-center gap-2.5">
-                    <label className="flex w-[110px] items-center gap-2 text-[13px] text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={slot.enabled}
-                        onChange={(e) => updateDay(day, { enabled: e.target.checked })}
-                      />
-                      {day}
-                    </label>
-                    <input
-                      type="time"
-                      aria-label={`${day} start time`}
-                      value={slot.start}
-                      disabled={!slot.enabled}
-                      onChange={(e) => updateDay(day, { start: e.target.value })}
-                      className={timeClass}
-                    />
-                    <span className="text-[12px] text-muted">to</span>
-                    <input
-                      type="time"
-                      aria-label={`${day} end time`}
-                      value={slot.end}
-                      disabled={!slot.enabled}
-                      onChange={(e) => updateDay(day, { end: e.target.value })}
-                      className={timeClass}
-                    />
-                    {slot.enabled && (
-                      <button
-                        type="button"
-                        onClick={() => copyToAll(day)}
-                        className="text-[11.5px] font-semibold text-accent"
-                      >
-                        Copy to all
-                      </button>
-                    )}
-                    {invalid && <span className="text-[11.5px] text-danger-fg">End must be after start</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+          {notice && (
+            <Alert variant={notice.variant} className="mt-3">
+              {notice.text}
+            </Alert>
+          )}
+          {error && <Alert className="mt-3">{error}</Alert>}
+          {needsReconnect && (
+            <Alert className="mt-3">Your Google session expired. Reconnect Google Calendar to continue.</Alert>
+          )}
 
-        <div className="mt-4 flex items-center justify-end gap-2.5">
-          <SavedFlash state={savedFlash.get("availability")} />
-          <button
-            type="button"
-            onClick={onSaveAvailability}
-            disabled={!allValid}
-            className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground disabled:opacity-60"
-          >
-            Save availability
-          </button>
-        </div>
-      </Card>
+          <div className={cn("mt-5 transition-opacity", !connected && "opacity-55")}>
+            {meetings && !meetings.unlimited && meetings.used !== null && (
+              <p className="mb-3 text-[12.5px] text-muted">
+                {meetings.used} of {meetings.int_value} meetings used on your plan.
+              </p>
+            )}
+            <div className="text-[12.5px] font-semibold text-muted">Availability</div>
+            <p className="mt-0.5 text-[12px] text-muted-subtle">
+              Saved in this browser for now — the backend has no availability endpoint yet.
+            </p>
+
+            {availability && (
+              <>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setAvailability(preset.build())}
+                      className="rounded-full border border-border bg-surface-strong px-3 py-1 text-[11.5px] font-semibold text-muted hover:text-foreground"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3.5 flex flex-col gap-2">
+                  {DAYS.map((day) => {
+                    const slot = availability[day];
+                    const invalid = !isValidSlot(slot);
+                    return (
+                      <div key={day} className="flex flex-wrap items-center gap-2.5">
+                        <button
+                          type="button"
+                          aria-pressed={slot.enabled}
+                          onClick={() => updateDay(day, { enabled: !slot.enabled })}
+                          className={cn(
+                            "w-[52px] rounded-lg border py-2 text-xs font-semibold",
+                            slot.enabled
+                              ? "border-accent/40 bg-accent-tint text-accent"
+                              : "border-border bg-surface-strong text-muted-subtle"
+                          )}
+                        >
+                          {day.slice(0, 3)}
+                        </button>
+                        <input
+                          type="time"
+                          aria-label={`${day} start time`}
+                          value={slot.start}
+                          disabled={!slot.enabled}
+                          onChange={(e) => updateDay(day, { start: e.target.value })}
+                          className={timeClass}
+                        />
+                        <span className="text-[12px] text-muted">to</span>
+                        <input
+                          type="time"
+                          aria-label={`${day} end time`}
+                          value={slot.end}
+                          disabled={!slot.enabled}
+                          onChange={(e) => updateDay(day, { end: e.target.value })}
+                          className={timeClass}
+                        />
+                        {slot.enabled && (
+                          <button
+                            type="button"
+                            onClick={() => copyToAll(day)}
+                            className="text-[11.5px] font-semibold text-accent"
+                          >
+                            Copy to all
+                          </button>
+                        )}
+                        {invalid && <span className="text-[11.5px] text-danger-fg">End must be after start</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2.5 border-t border-border pt-4">
+              {connected ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDisable(true)}
+                  disabled={busy}
+                  className="text-[13px] font-semibold text-danger-fg disabled:opacity-60"
+                >
+                  Disconnect Google
+                </button>
+              ) : (
+                <span />
+              )}
+              <div className="flex items-center gap-2.5">
+                <SavedFlash state={savedFlash.get("availability")} />
+                <button
+                  type="button"
+                  onClick={onSaveAvailability}
+                  disabled={!allValid}
+                  className="rounded-lg bg-foreground px-4 py-2 text-xs font-semibold text-background disabled:opacity-60"
+                >
+                  Save availability
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </PlanLock>
 
       {confirmDisable && (
         <ConfirmDialog
-          title="Disable Google Calendar?"
-          description="This revokes access and removes the stored connection. You can enable it again any time."
-          confirmLabel="Yes, disable"
-          cancelLabel="Keep enabled"
+          title="Disconnect Google Calendar?"
+          description="This revokes access and removes the stored connection. You can connect again any time."
+          confirmLabel="Yes, disconnect"
+          cancelLabel="Keep connected"
           onConfirm={disable}
           onCancel={() => setConfirmDisable(false)}
         />

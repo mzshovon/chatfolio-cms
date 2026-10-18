@@ -4,6 +4,7 @@ import { FeedbackModal } from "@/components/dashboard/feedback-modal";
 import { NAV_ITEMS } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuthStore } from "@/store/auth-store";
+import { usePlanAccess } from "@/store/entitlements-store";
 import { ChevronDown, MessageCircleHeart } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
@@ -21,6 +22,7 @@ export function Header() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const plan = usePlanAccess();
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
@@ -40,6 +42,22 @@ export function Header() {
       <div className="font-serif text-[15px] font-semibold text-foreground">{activeLabel}</div>
 
       <div className="flex items-center gap-2.5">
+        {plan.ready &&
+          (plan.isFree ? (
+            <Link
+              href="/dashboard/plan"
+              className="rounded-full border border-accent/30 bg-accent-tint px-3 py-1.5 text-[12.5px] font-semibold text-accent hover:border-accent"
+            >
+              {plan.planName} · Upgrade
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard/plan"
+              className="rounded-full bg-brand-bg px-3 py-1.5 text-[12.5px] font-semibold text-brand-accent"
+            >
+              {plan.planName}
+            </Link>
+          ))}
         {user?.role !== "admin" && (
           <button
             type="button"

@@ -5,10 +5,22 @@ import { Header } from "@/components/dashboard/header";
 import { OnboardingTracker } from "@/components/dashboard/onboarding-tracker";
 import { OnboardingTutorial } from "@/components/dashboard/onboarding-tutorial";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { useState, type ReactNode } from "react";
+import { useAuthStore } from "@/store/auth-store";
+import { useEntitlementsStore } from "@/store/entitlements-store";
+import { useEffect, useState, type ReactNode } from "react";
 
 function DashboardShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const getValidAccessToken = useAuthStore((state) => state.getValidAccessToken);
+  const loadEntitlements = useEntitlementsStore((state) => state.load);
+
+  // The plan drives every lock in the dashboard, so load it once for the shell.
+  useEffect(() => {
+    void (async () => {
+      const token = await getValidAccessToken();
+      if (token) await loadEntitlements(token);
+    })();
+  }, [getValidAccessToken, loadEntitlements]);
 
   return (
     <div className="flex min-h-screen bg-background">

@@ -12,7 +12,7 @@ import {
 import { Check, Rocket, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const noopSubscribe = () => () => {};
 
@@ -20,6 +20,11 @@ const noopSubscribe = () => () => {};
 // they choose their own — used as a cheap "have they touched publish
 // settings yet" signal without a dedicated backend flag for it.
 const DEFAULT_SLUG_PATTERN = /^candidate-[a-z0-9]+$/;
+
+// Pages where the candidate can complete a remote-backed tracker step.
+const STATE_CHANGING_PATHS = ["/dashboard/sections", "/dashboard/publish"];
+
+type RemoteState = { sectionsApproved: boolean; slugCustomized: boolean; published: boolean };
 
 type Step = {
   id: string;
@@ -43,7 +48,19 @@ export function OnboardingTracker() {
   );
   const [openOverride, setOpenOverride] = useState<boolean | null>(null);
   const open = openOverride ?? storedOpen;
-  const [steps, setSteps] = useState<Step[] | null>(null);
+  const [remote, setRemote] = useState<RemoteState | null>(null);
+  // Re-fetch only after leaving a page that can change the remote state
+  // (approving sections, publish settings) — not on every menu click.
+  const prevPathRef = useRef(pathname);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const prev = prevPathRef.current;
+    prevPathRef.current = pathname;
+    if (prev !== pathname && STATE_CHANGING_PATHS.some((p) => prev.startsWith(p))) {
+      setRefreshKey((k) => k + 1);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,39 +71,11 @@ export function OnboardingTracker() {
           authed((token) => portfolioApi.getPortfolioSettings(token)),
         ]);
         if (cancelled) return;
-        const sectionsApproved =
-          sections.length > 0 && sections.every((s) => s.status === "approved");
-        const slugCustomized = !DEFAULT_SLUG_PATTERN.test(settings.slug);
-        setSteps([
-          {
-            id: "cv",
-            label: "Upload your CV",
-            href: "/dashboard/cv",
-            action: "Upload",
-            done: getCvUploadedFlag(),
-          },
-          {
-            id: "sections",
-            label: "Approve AI intro & summary",
-            href: "/dashboard/sections",
-            action: "Review",
-            done: sectionsApproved,
-          },
-          {
-            id: "slug",
-            label: "Set your publish slug",
-            href: "/dashboard/publish",
-            action: "Set up",
-            done: slugCustomized,
-          },
-          {
-            id: "publish",
-            label: "Publish your chatfolio",
-            href: "/dashboard/publish",
-            action: "Publish",
-            done: settings.is_published,
-          },
-        ]);
+        setRemote({
+          sectionsApproved: sections.length > 0 && sections.every((s) => s.status === "approved"),
+          slugCustomized: !DEFAULT_SLUG_PATTERN.test(settings.slug),
+          published: settings.is_published,
+        });
       } catch {
         // Best-effort nudge widget — a failed fetch here shouldn't surface a
         // dashboard-wide error, it should just not render this run.
@@ -95,12 +84,37 @@ export function OnboardingTracker() {
     return () => {
       cancelled = true;
     };
-    // Re-checks on every navigation so completing a step on one page (e.g.
-    // approving a section) is reflected the next time this renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [refreshKey]);
 
-  if (!steps) return null;
+  if (!remote) return null;
+
+  // The CV step reads a local flag (no request), so it's recomputed on every
+  // render and updates the moment an upload finishes.
+  const steps: Step[] = [
+    { id: "cv", label: "Upload your CV", href: "/dashboard/cv", action: "Upload", done: getCvUploadedFlag() },
+    {
+      id: "sections",
+      label: "Approve AI intro & summary",
+      href: "/dashboard/sections",
+      action: "Review",
+      done: remote.sectionsApproved,
+    },
+    {
+      id: "slug",
+      label: "Set your publish slug",
+      href: "/dashboard/publish",
+      action: "Set up",
+      done: remote.slugCustomized,
+    },
+    {
+      id: "publish",
+      label: "Publish your chatfolio",
+      href: "/dashboard/publish",
+      action: "Publish",
+      done: remote.published,
+    },
+  ];
 
   const doneCount = steps.filter((s) => s.done).length;
   const pct = Math.round((doneCount / steps.length) * 100);

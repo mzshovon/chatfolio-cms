@@ -18,6 +18,9 @@ export type ConversationSummary = {
   reviewed_by_candidate: boolean;
   message_count: number;
   recruiter_metadata: RecruiterMetadata | null;
+  // True when the plan has no recruiter insights: recruiter_metadata is
+  // stripped server-side, so the UI shows a locked state instead.
+  recruiter_insights_locked: boolean;
 };
 
 export type ConversationMessage = {
