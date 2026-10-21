@@ -13,6 +13,7 @@ import { useAuthedRequest } from "@/lib/hooks/use-authed-request";
 import { useSaveFlash } from "@/lib/hooks/use-save-flash";
 import { cn } from "@/lib/cn";
 import { AlertCircle, Check } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 // Matches the backend's slug validation exactly (Docs §6): lowercase
@@ -46,6 +47,7 @@ export default function PublishSettingsPage() {
   const [cvDownloadable, setCvDownloadable] = useState(true);
 
   const [copyLabel, setCopyLabel] = useState("Copy link");
+  const [postLabel, setPostLabel] = useState("Copy post");
   const [slugError, setSlugError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -171,68 +173,134 @@ export default function PublishSettingsPage() {
     );
   }
 
+  const sectionsReady = totalSections > 0 && approvedCount >= totalSections;
   const checklist = [
-    { label: "Full name set", done: nameSet },
-    { label: `Sections approved (${approvedCount} of ${totalSections})`, done: approvedCount >= totalSections },
+    { label: "Full name set", done: nameSet, cta: "Add name", href: "/dashboard/profile" },
+    {
+      label: `Sections approved (${approvedCount} of ${totalSections})`,
+      done: sectionsReady,
+      cta: "Review",
+      href: "/dashboard/sections",
+    },
   ];
+  const ready = checklist.every((c) => c.done);
+  const publicUrl = `https://${settings.subdomain}`;
+  const postText = `I've turned my CV into an AI portfolio. Recruiters can ask it about my experience, projects and availability anytime: ${publicUrl}`;
   const fieldClass =
     "flex-1 rounded-[9px] border border-border bg-surface-strong px-3.5 py-3 text-[13.5px] text-foreground outline-none focus:border-accent";
+  const live = settings.is_published;
+  const statusColor = live ? "text-[#7fd3a0]" : "text-[#f2c27a]";
+  const statusDot = live ? "bg-[#3fae6a]" : "bg-brand-accent";
+
+  const onCopyPost = async () => {
+    try {
+      await navigator.clipboard.writeText(postText);
+      setPostLabel("Copied!");
+    } catch {
+      setPostLabel("Copy failed");
+    }
+    setTimeout(() => setPostLabel("Copy post"), 1500);
+  };
 
   return (
-    <div className="mx-auto max-w-[720px] p-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-[22px] font-semibold text-foreground">
-            Publish your chatfolio
-          </h1>
-          <p className="mt-1 text-[13px] text-muted">
-            Control your public link and go live for recruiters.
-          </p>
-        </div>
-        <StatusPill tone={settings.is_published ? "success" : "neutral"}>
-          {settings.is_published ? "Live" : "Not published"}
-        </StatusPill>
-      </div>
+    <div className="flex flex-wrap items-start gap-5 p-7">
+      <div className="flex min-w-0 flex-[1_1_520px] flex-col gap-[18px]">
+        {error && <Alert>{error}</Alert>}
 
-      {error && <Alert className="mt-4">{error}</Alert>}
-
-      <Card className="mt-5 flex flex-col gap-4">
-        <div>
-          <div className="mb-1.5 text-xs text-muted">Your chatfolio URL</div>
-          <div className="flex gap-2.5">
-            <input
-              value={slugDraft}
-              onChange={(e) => {
-                setSlugDraft(e.target.value.toLowerCase());
-                setSlugError(null);
-              }}
-              className={cn(fieldClass, slugError && "border-danger-fg/50")}
-            />
+        <div className="rounded-2xl bg-brand-bg p-6 text-brand-fg">
+          <div className="flex flex-wrap items-center justify-between gap-3.5">
+            <span className={cn("flex items-center gap-2 text-xs font-bold tracking-[0.12em]", statusColor)}>
+              <span className={cn("h-2 w-2 rounded-full", statusDot)} />
+              {live ? "LIVE" : "NOT PUBLISHED"}
+            </span>
+            {live ? (
+              <button
+                type="button"
+                onClick={onUnpublish}
+                disabled={publishing}
+                className="rounded-[9px] border border-brand-border px-4 py-2 text-[13px] font-semibold hover:bg-white/5 disabled:opacity-60"
+              >
+                {publishing ? "Unpublishing…" : "Unpublish"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onPublish}
+                disabled={publishing || !ready}
+                className="rounded-[9px] bg-accent px-4 py-2 text-[13px] font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+              >
+                {publishing ? "Publishing…" : "Publish chatfolio"}
+              </button>
+            )}
+          </div>
+          <div className="mt-4 break-all font-mono text-[clamp(20px,3vw,28px)] font-semibold">{settings.subdomain}</div>
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={onCopyLink}
-              className="shrink-0 rounded-[9px] border border-border bg-surface-strong px-4 text-[13px] font-semibold text-foreground"
+              className="rounded-lg border border-brand-border px-3 py-2 text-[12.5px] font-semibold hover:bg-white/5"
             >
               {copyLabel}
             </button>
+            {live && (
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-brand-border px-3 py-2 text-[12.5px] font-semibold hover:bg-white/5"
+              >
+                Open ↗
+              </a>
+            )}
           </div>
-          {slugError ? (
-            <div className="mt-1.5 text-xs text-danger-fg">{slugError}</div>
-          ) : (
-            <div className="mt-1.5 text-xs text-muted">{slugDraft}.chatfolio.chat</div>
+          {!live && !ready && (
+            <div className="mt-3.5 text-[13px] text-[#f2c27a]">Finish the checklist below before publishing.</div>
           )}
+          {publishError && <div className="mt-3.5 text-[13px] text-[#f2a894]">{publishError}</div>}
         </div>
-        {settings.previous_slug && (
-          <div className="text-xs text-muted">
-            Your old link ({settings.previous_slug}.chatfolio.chat) will keep redirecting here.
+
+        <Card className="bg-surface-strong p-5 sm:p-[22px]">
+          <div className="text-[15px] font-semibold text-foreground">Your link</div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <div
+              className={cn(
+                "flex min-w-[240px] flex-1 items-center overflow-hidden rounded-[10px] border-[1.5px] bg-background",
+                slugError ? "border-danger-fg/50" : "border-border"
+              )}
+            >
+              <input
+                value={slugDraft}
+                onChange={(e) => {
+                  setSlugDraft(e.target.value.toLowerCase());
+                  setSlugError(null);
+                }}
+                className="min-w-0 flex-1 bg-transparent px-3 py-[11px] font-mono text-[14.5px] font-semibold text-foreground outline-none"
+              />
+              <span className="px-3 font-mono text-sm text-muted">.chatfolio.chat</span>
+            </div>
+            <button
+              type="button"
+              onClick={onSaveSettings}
+              disabled={saving}
+              className="min-h-[44px] rounded-[10px] bg-foreground px-[18px] text-[13.5px] font-semibold text-background disabled:opacity-60"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
           </div>
-        )}
+          <div className={cn("mt-2 text-[12.5px]", slugError ? "text-danger-fg" : "text-muted")}>
+            {slugError ??
+              (settings.previous_slug
+                ? `Your old link (${settings.previous_slug}.chatfolio.chat) will keep redirecting here.`
+                : "Renaming later is safe — your old link keeps working.")}
+          </div>
+          <div className="mt-2 flex justify-end">
+            <SavedFlash state={savedFlash.get("settings")} />
+          </div>
+        </Card>
 
-        <div className="h-px bg-border" />
-
-        <div>
-          <div className="mb-1.5 text-xs text-muted">Contact call-to-action</div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.4fr]">
+        <Card className="bg-surface-strong p-5 sm:p-[22px]">
+          <div className="text-[15px] font-semibold text-foreground">Contact button &amp; CV</div>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.4fr]">
             <input
               placeholder="Button label"
               value={ctaLabel}
@@ -246,76 +314,96 @@ export default function PublishSettingsPage() {
               className={fieldClass}
             />
           </div>
-        </div>
+          <label className="mt-3.5 flex cursor-pointer items-center gap-2.5 text-[13px] text-foreground">
+            <input
+              type="checkbox"
+              checked={cvDownloadable}
+              onChange={(e) => setCvDownloadable(e.target.checked)}
+              className="accent-accent"
+            />
+            Allow recruiters to download your CV
+          </label>
+          <div className="mt-3.5 flex justify-end">
+            <button
+              type="button"
+              onClick={onSaveSettings}
+              disabled={saving}
+              className="rounded-[9px] bg-foreground px-4 py-2 text-[13px] font-semibold text-background disabled:opacity-60"
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </Card>
 
-        <label className="flex cursor-pointer items-center gap-2.5 text-[13px] text-foreground">
-          <input
-            type="checkbox"
-            checked={cvDownloadable}
-            onChange={(e) => setCvDownloadable(e.target.checked)}
-            className="accent-accent"
-          />
-          Allow recruiters to download your CV
-        </label>
-
-        <div className="flex items-center gap-2.5">
-          <SavedFlash state={savedFlash.get("settings")} />
-          <button
-            type="button"
-            onClick={onSaveSettings}
-            disabled={saving}
-            className="rounded-[9px] bg-accent px-4 py-2 text-[13px] font-semibold text-accent-foreground disabled:opacity-60"
-          >
-            {saving ? "Saving…" : "Save settings"}
-          </button>
-        </div>
-      </Card>
-
-      <Card className="mt-4">
-        <span className="text-[13.5px] font-semibold text-foreground">Publish checklist</span>
-        <div className="mt-3.5 flex flex-col gap-2.5">
-          {checklist.map((item) => (
-            <div key={item.label} className="flex items-center gap-2.5 text-[13px]">
-              <span
-                className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[11px] ${
-                  item.done ? "bg-success-bg text-success-fg" : "bg-danger-bg text-danger-fg"
-                }`}
-              >
-                {item.done ? (
-                  <Check className="h-3 w-3" strokeWidth={2.5} />
-                ) : (
-                  <AlertCircle className="h-3 w-3" strokeWidth={2.5} />
-                )}
-              </span>
-              <span className={item.done ? "text-foreground" : "text-muted"}>{item.label}</span>
+        <Card className="bg-surface-strong p-5 sm:p-[22px]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[15px] font-semibold text-foreground">Custom domains</div>
+              <div className="text-[12.5px] text-muted">Use your own domain for your chatfolio.</div>
             </div>
-          ))}
-        </div>
-      </Card>
+            <StatusPill tone="neutral">Coming soon</StatusPill>
+          </div>
+        </Card>
 
-      {publishError && <Alert className="mt-3.5">{publishError}</Alert>}
-
-      <div className="mt-5 flex gap-2.5">
-        {settings.is_published ? (
-          <button
-            type="button"
-            onClick={onUnpublish}
-            disabled={publishing}
-            className="rounded-[10px] border border-danger-fg/30 bg-surface-strong px-5 py-3 text-[13.5px] font-semibold text-danger-fg disabled:opacity-60"
-          >
-            {publishing ? "Unpublishing…" : "Unpublish"}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onPublish}
-            disabled={publishing}
-            className="rounded-[10px] bg-accent px-5 py-3 text-[13.5px] font-semibold text-accent-foreground disabled:opacity-60"
-          >
-            {publishing ? "Publishing…" : "Publish chatfolio"}
-          </button>
-        )}
+        <Card className="bg-surface-strong p-5 sm:p-[22px]">
+          <div className="text-[15px] font-semibold text-foreground">Publish checklist</div>
+          <div className="mt-3 flex flex-col gap-2.5">
+            {checklist.map((item) => (
+              <div key={item.label} className="flex items-center gap-2.5 text-[13.5px]">
+                <span
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                    item.done ? "bg-success-bg text-success-fg" : "border border-border text-muted-subtle"
+                  )}
+                >
+                  {item.done ? (
+                    <Check className="h-3 w-3" strokeWidth={2.5} />
+                  ) : (
+                    <AlertCircle className="h-3 w-3" strokeWidth={2.5} />
+                  )}
+                </span>
+                <span className={cn("flex-1", item.done ? "text-foreground" : "text-muted")}>{item.label}</span>
+                {!item.done && (
+                  <Link href={item.href} className="text-xs font-semibold text-accent hover:text-accent-hover">
+                    {item.cta}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
+
+      <aside className="flex min-w-[280px] flex-[0_1_330px] flex-col gap-4 rounded-2xl border border-border bg-surface-strong p-5 lg:sticky lg:top-5">
+        <div>
+          <div className="text-[14.5px] font-semibold text-foreground">Share kit</div>
+          <div className="mt-0.5 text-[12.5px] text-muted">Put your link where recruiters look.</div>
+        </div>
+        <a
+          href={live ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicUrl)}` : undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={!live}
+          className={cn(
+            "rounded-[10px] bg-[#0a66c2] p-[11px] text-center text-[13.5px] font-semibold text-white",
+            !live && "pointer-events-none opacity-50"
+          )}
+        >
+          Share on LinkedIn
+        </a>
+        <div className="rounded-xl border border-border p-3.5">
+          <div className="text-xs font-bold tracking-[0.1em] text-muted">READY-MADE POST</div>
+          <div className="mt-2 text-[13px] leading-relaxed text-foreground/80">{postText}</div>
+          <button
+            type="button"
+            onClick={onCopyPost}
+            className="mt-2.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12.5px] font-semibold text-foreground"
+          >
+            {postLabel}
+          </button>
+        </div>
+        {!live && <p className="text-xs text-muted">Publish first — the link only works once your chatfolio is live.</p>}
+      </aside>
     </div>
   );
 }

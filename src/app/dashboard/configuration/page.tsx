@@ -72,8 +72,6 @@ export default function ConfigurationPage() {
         <p className="mt-1 text-[13px] text-muted">How your chatfolio answers and books meetings.</p>
       </div>
 
-      <GoogleCalendarCard />
-
       <Card className="bg-surface-strong p-5 sm:p-[22px]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-[38px] w-[38px] items-center justify-center rounded-[10px] bg-accent-tint font-bold text-accent">
@@ -156,6 +154,8 @@ export default function ConfigurationPage() {
           </div>
         )}
       </Card>
+
+      <GoogleCalendarCard />
     </div>
   );
 }
